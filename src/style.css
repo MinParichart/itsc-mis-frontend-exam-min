@@ -1,0 +1,14 @@
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+
+@import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,400;1,100&display=swap');
+
+
+@import "tailwindcss";
+
+body {
+  font-family: 'Prompt', sans-serif;
+}
+
+
