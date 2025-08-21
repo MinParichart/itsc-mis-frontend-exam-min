@@ -1,7 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{ modelValue: boolean }>()
-const emit  = defineEmits<{'update:modelValue':[boolean]}>()
-
+const emit  = defineEmits<{ 'update:modelValue':[boolean] }>()
 const toggle = () => emit('update:modelValue', !props.modelValue)
 </script>
 

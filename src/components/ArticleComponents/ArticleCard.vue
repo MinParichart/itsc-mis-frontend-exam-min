@@ -8,7 +8,6 @@ interface Article {
   thumbnail?: string
   active: boolean
 }
-
 const props = defineProps<{ article: Article }>()
 const emit  = defineEmits<{
   'update:active':[boolean],
@@ -17,28 +16,22 @@ const emit  = defineEmits<{
 </script>
 
 <template>
-  <tr class="border-b border-gray-200 hover:bg-gray-50 text-sm">
-    <!-- checkbox -->
-    <td class="p-2"><input type="checkbox" /></td>
-
-    <!-- content -->
-    <td class="p-2 flex items-start gap-3 min-w-[280px]">
+  <div class="border rounded-lg p-3 bg-white shadow-sm">
+    <div class="flex items-start gap-3">
+      <input type="checkbox" class="mt-2" />
       <img
         v-if="props.article.thumbnail"
         :src="props.article.thumbnail"
         alt="thumb"
-        class="w-12 h-12 md:w-16 md:h-16 rounded object-cover"
+        class="w-16 h-16 rounded object-cover"
       />
-      <div class="flex flex-col min-w-0">
-        <span class="font-bold truncate max-w-[200px] sm:max-w-[320px] md:max-w-[480px] text-gray-600">
-          {{ props.article.title }}
-        </span>
-        <span class="text-sm text-gray-500">📆 {{ props.article.date }}</span>
+      <div class="flex-1 min-w-0">
+        <p class="font-bold text-gray-700 truncate">{{ props.article.title }}</p>
+        <p class="text-sm text-gray-500">📆 {{ props.article.date }}</p>
       </div>
-    </td>
+    </div>
 
-    <!-- actions -->
-    <td class="p-2">
+    <div class="mt-3">
       <ArticleActions
         :active="props.article.active"
         @update:active="(v)=>emit('update:active', v)"
@@ -47,6 +40,6 @@ const emit  = defineEmits<{
         @delete="emit('delete')"
         @pin="emit('pin')"
       />
-    </td>
-  </tr>
+    </div>
+  </div>
 </template>

@@ -6,7 +6,7 @@
         <span>+ เพิ่มบทความใหม่</span>
       </button>
     </div>
-    <!-- รับ toggle ผ่าน slot -->
+    <!-- toggle จะถูกส่งเข้ามาทาง slot -->
     <slot />
   </div>
 </template>
