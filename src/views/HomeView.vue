@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import ArticleList from '@/components/ArticleList.vue';
-import NavbarComponent from '@/components/NavbarForAll.vue';
+import NavbarForAll from '@/components/NavbarForAll.vue';
+import BlogsList from '@/components/ฺBlogsList.vue';
 
 </script>
 
 <template>
 
-  <NavbarComponent></NavbarComponent>
-  <ArticleList></ArticleList>
+  <NavbarForAll></NavbarForAll>
+  <BlogsList></BlogsList>
 
 </template>
 

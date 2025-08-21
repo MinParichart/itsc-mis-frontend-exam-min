@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import ArticleActions from './ArticleActions.vue'
+import BlogsActions from './BlogsActions.vue'
 
-interface Article {
+interface Blogs {
   id: number
   title: string
   date: string
@@ -9,7 +9,7 @@ interface Article {
   active: boolean
 }
 
-const props = defineProps<{ article: Article }>()
+const props = defineProps<{ blog : Blogs }>()
 const emit  = defineEmits<{
   'update:active':[boolean],
   share:[], edit:[], delete:[], pin:[]
@@ -24,23 +24,23 @@ const emit  = defineEmits<{
     <!-- content -->
     <td class="p-2 flex items-start gap-3 min-w-[280px]">
       <img
-        v-if="props.article.thumbnail"
-        :src="props.article.thumbnail"
+        v-if="props.blog.thumbnail"
+        :src="props.blog.thumbnail"
         alt="thumb"
         class="w-12 h-12 md:w-16 md:h-16 rounded object-cover"
       />
       <div class="flex flex-col min-w-0">
         <span class="font-bold truncate max-w-[200px] sm:max-w-[320px] md:max-w-[480px] text-gray-600">
-          {{ props.article.title }}
+          {{ props.blog.title }}
         </span>
-        <span class="text-sm text-gray-500">📆 {{ props.article.date }}</span>
+        <span class="text-sm text-gray-500">📆 {{ props.blog.date }}</span>
       </div>
     </td>
 
     <!-- actions -->
     <td class="p-2">
-      <ArticleActions
-        :active="props.article.active"
+      <BlogsActions
+        :active="props.blog.active"
         @update:active="(v)=>emit('update:active', v)"
         @share="emit('share')"
         @edit="emit('edit')"

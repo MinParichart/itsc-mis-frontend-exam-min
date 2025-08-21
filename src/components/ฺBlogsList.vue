@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import ArticleCard from './ArticleComponents/ArticleCard.vue'
-import ArticleFooter from './ArticleComponents/ArticleFooter.vue'
-import ArticleHeader from './ArticleComponents/ArticleHeader.vue'
-import ArticleItem from './ArticleComponents/ArticleItem.vue'
-import ArticleSearch from './ArticleComponents/ArticleSearch.vue'
-import ArticleToggle from './ArticleComponents/ArticleToggle.vue'
+import BlogsCard from './BlogsComponents/BlogsCard.vue'
+import BlogsFooter from './BlogsComponents/BlogsFooter.vue'
+import BlogsHeader from './BlogsComponents/BlogsHeader.vue'
+import BlogsItem from './BlogsComponents/BlogsItem.vue'
+import BlogsSearch from './BlogsComponents/BlogsSearch.vue'
+import BlogsToggle from './BlogsComponents/BlogsToggle.vue'
 
-interface Article {
+interface Blogs {
   id: number
   title: string
   date: string
@@ -19,7 +19,7 @@ const showAll  = ref(false)   // true = แสดงทุกบทความ,
 const search   = ref('')
 const pageSize = ref(10)
 
-const articles = ref<Article[]>([
+const blogs = ref<Blogs[]>([
   { id: 1,  title: 'Concert in Thailand',            date: '10 ก.พ. 2567 08:15 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
   { id: 2,  title: 'The Rose Music',                 date: '10 ก.พ. 2567 23:18 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: false },
   { id: 3,  title: 'Crab Omlet in Thailand',         date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
@@ -34,35 +34,35 @@ const articles = ref<Article[]>([
   { id:12,  title: 'Become Youth again',             date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  }
 ])
 
-/** กรอง: showAll + คำค้นหา */
-const visibleArticles = computed<Article[]>(() =>
-  articles.value.filter(a => {
+/* กรอง: showAll + คำค้นหา */
+const visibleBlogs = computed<Blogs[]>(() =>
+  blogs.value.filter(a => {
     const passActive = showAll.value ? true : a.active
     const passSearch = a.title.toLowerCase().includes(search.value.toLowerCase())
     return passActive && passSearch
   })
 )
 
-/** ตัดจำนวนตาม pageSize */
-const pagedArticles = computed<Article[]>(() =>
-  visibleArticles.value.slice(0, pageSize.value)
+/* ตัดจำนวนตาม pageSize */
+const pagedBlogs = computed<Blogs[]>(() =>
+  visibleBlogs.value.slice(0, pageSize.value)
 )
 
-/** อัปเดตค่า active (รับจาก child) */
-const setActive = (target: Article, next: boolean) => { target.active = next }
+/* อัปเดตค่า active (รับจาก child) */
+const setActive = (target: Blogs, next: boolean) => { target.active = next }
 </script>
 
 <template>
   <div class="container mx-auto shadow rounded-lg p-4 my-5">
     <!-- Header + Toggle -->
-    <ArticleHeader>
+    <BlogsHeader>
       <div class="flex items-center gap-2">
-        <ArticleToggle v-model="showAll" />
+        <BlogsToggle v-model="showAll" />
         <span class="text-sm">แสดงทั้งหมด</span>
       </div>
-    </ArticleHeader>
+    </BlogsHeader>
 
-    <ArticleSearch v-model="search" />
+    <BlogsSearch v-model="search" />
 
     <div class="overflow-x-auto">
       <!-- Desktop Table -->
@@ -76,10 +76,10 @@ const setActive = (target: Article, next: boolean) => { target.active = next }
             </tr>
           </thead>
           <tbody>
-            <template v-for="article in pagedArticles" :key="article.id">
-              <ArticleItem
-                :article="article"
-                @update:active="(v)=>setActive(article, v)"
+            <template v-for="blog in pagedBlogs" :key="blog.id">
+              <BlogsItem
+                :blog="blog"
+                @update:active="(v)=>setActive(blog, v)"
                 @share="() => {}"
                 @edit="() => {}"
                 @delete="() => {}"
@@ -92,11 +92,11 @@ const setActive = (target: Article, next: boolean) => { target.active = next }
 
       <!-- Mobile Cards -->
       <div class="md:hidden space-y-4">
-        <ArticleCard
-          v-for="article in pagedArticles"
-          :key="article.id"
-          :article="article"
-          @update:active="(v)=>setActive(article, v)"
+        <BlogsCard
+          v-for="blog in pagedBlogs"
+          :key="blog.id"
+          :blog="blog"
+          @update:active="(v)=>setActive(blog, v)"
           @share="() => {}"
           @edit="() => {}"
           @delete="() => {}"
@@ -105,6 +105,6 @@ const setActive = (target: Article, next: boolean) => { target.active = next }
       </div>
     </div>
 
-    <ArticleFooter :total="pagedArticles.length" v-model:pageSize="pageSize" />
+    <BlogsFooter :total="pagedBlogs.length" v-model:pageSize="pageSize" />
   </div>
 </template>
