@@ -5,12 +5,6 @@ import BlogsList from '@/components/ฺBlogsList.vue';
 </script>
 
 <template>
-
   <NavbarForAll></NavbarForAll>
   <BlogsList></BlogsList>
-
 </template>
-
-<style scoped>
-
-</style>

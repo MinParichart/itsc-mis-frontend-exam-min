@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import Axios from 'axios'
+import { computed, onMounted, ref, watch } from 'vue'
 import BlogsCard from './BlogsComponents/BlogsCard.vue'
 import BlogsFooter from './BlogsComponents/BlogsFooter.vue'
 import BlogsHeader from './BlogsComponents/BlogsHeader.vue'
@@ -7,6 +8,7 @@ import BlogsItem from './BlogsComponents/BlogsItem.vue'
 import BlogsSearch from './BlogsComponents/BlogsSearch.vue'
 import BlogsToggle from './BlogsComponents/BlogsToggle.vue'
 
+/** ================= UI model ================= */
 interface Blogs {
   id: number
   title: string
@@ -15,40 +17,141 @@ interface Blogs {
   active: boolean
 }
 
+/** ================= API types ================= */
+type ApiImage = { url?: string }
+interface ApiBlog {
+  id: number | string
+  title?: string
+  content?: string
+  hit?: number
+  pin?: boolean
+  active?: boolean
+  createdAt?: string
+  updatedAt?: string
+  img?: ApiImage
+  Img?: ApiImage
+}
+
+interface ApiListResp {
+  totalItems: number
+  rows: ApiBlog[]
+  totalPages: number
+  currentPage: number
+}
+
+interface ApiAltResp {
+  data: ApiBlog[]
+}
+
+interface ApiErrorPayload {
+  message?: string
+  error?: string
+  errors?: Record<string, unknown>
+}
+
+/** ================= State ================= */
 const showAll  = ref(false)   // true = แสดงทุกบทความ, false = เฉพาะ active
 const search   = ref('')
 const pageSize = ref(10)
+const blogs    = ref<Blogs[]>([])
+const loading  = ref(false)
+const error    = ref<string | null>(null)
 
-const blogs = ref<Blogs[]>([
-  { id: 1,  title: 'Concert in Thailand',            date: '10 ก.พ. 2567 08:15 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id: 2,  title: 'The Rose Music',                 date: '10 ก.พ. 2567 23:18 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: false },
-  { id: 3,  title: 'Crab Omlet in Thailand',         date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id: 4,  title: 'Taylor Swiftt concert in Thailand', date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id: 5,  title: 'I will eat everything today',    date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id: 6,  title: 'Mission to the mar',             date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id: 7,  title: 'Music pop na rock a',            date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id: 8,  title: 'Art is everywhere',              date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id: 9,  title: 'Advice not command',             date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id:10,  title: 'How to survise in Thailand',     date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id:11,  title: 'Word in Thai you should know',   date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  },
-  { id:12,  title: 'Become Youth again',             date: '10 ก.พ. 2567 21:00 น.', thumbnail: 'https://shorturl.asia/ntaxE', active: true  }
-])
+/** ================= Config (.env รองรับ, มี default) ================= */
+const API_BASE    = (import.meta.env.VITE_API_BASE as string)       || 'https://exam-api.dev.mis.cmu.ac.th/api'
+const BLOGS_INDEX = (import.meta.env.VITE_API_BLOGS_INDEX as string) || '/blogs'
+const AUTH_HEADER: Record<string, string> = { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
 
-/* กรอง: showAll + คำค้นหา */
+/** origin สำหรับรูป (ตัด "/api" ท้าย base ออก) */
+const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '')
+
+/** ================= Helpers ================= */
+function toThaiDate(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })
+  const time = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })
+  return `${date} ${time} น.`
+}
+
+function fixImgUrl(u?: string): string | undefined {
+  if (!u) return undefined
+  const clean = u.replace(/\\/g, '/')
+  if (/^https?:\/\//.test(clean)) return clean
+  return `${API_ORIGIN}${clean.startsWith('/') ? '' : '/'}${clean}`
+}
+
+/** type guards สำหรับ payload รูปแบบต่าง ๆ */
+function isApiListResp(x: unknown): x is ApiListResp {
+  return !!x && typeof x === 'object' && 'rows' in x
+}
+function isApiAltResp(x: unknown): x is ApiAltResp {
+  return !!x && typeof x === 'object' && 'data' in x
+}
+
+/** ================= Fetch ================= */
+async function fetchBlogs(): Promise<void> {
+  loading.value = true
+  error.value = null
+  try {
+    const res = await Axios.get<ApiListResp | ApiAltResp | ApiBlog[]>(
+      `${API_BASE}${BLOGS_INDEX}`,
+      {
+        headers: AUTH_HEADER,
+        params: {
+          page: 1, // ถ้ามี state สำหรับเลขหน้า ค่อยผูกเพิ่ม
+          size: pageSize.value,
+          q: search.value || undefined,
+          show: showAll.value ? 'all' : 'active',
+        },
+      }
+    )
+
+    const payload = res.data
+    // รองรับทั้ง {rows: [...]}, {data: [...]}, หรือ [] ตรง ๆ
+    const rows: ApiBlog[] = Array.isArray(payload)
+      ? payload
+      : isApiListResp(payload)
+        ? payload.rows
+        : isApiAltResp(payload)
+          ? payload.data
+          : []
+
+    blogs.value = rows.map((b): Blogs => ({
+      id: Number(b.id),
+      title: String(b.title ?? ''),
+      date: toThaiDate(b.createdAt),
+      thumbnail: fixImgUrl(b.img?.url ?? b.Img?.url),
+      active: Boolean(b.active),
+    }))
+  } catch (e: unknown) {
+    let msg = 'โหลดข้อมูลไม่สำเร็จ'
+    if (Axios.isAxiosError<ApiErrorPayload>(e)) {
+      msg = e.response?.data?.message ?? e.message ?? msg
+    } else if (e instanceof Error) {
+      msg = e.message
+    } else {
+      msg = String(e)
+    }
+    error.value = msg
+  } finally {
+    loading.value = false
+  }
+}
+
+/** ================= Lifecycle / Watch ================= */
+onMounted(fetchBlogs)
+watch([showAll, pageSize, search], fetchBlogs)
+
+/** ================= Client filters (UI เดิม) ================= */
 const visibleBlogs = computed<Blogs[]>(() =>
-  blogs.value.filter(a => {
-    const passActive = showAll.value ? true : a.active
-    const passSearch = a.title.toLowerCase().includes(search.value.toLowerCase())
-    return passActive && passSearch
-  })
+  blogs.value.filter(a =>
+    a.title.toLowerCase().includes(search.value.toLowerCase())
+  )
 )
+const pagedBlogs = computed<Blogs[]>(() => visibleBlogs.value.slice(0, pageSize.value))
 
-/* ตัดจำนวนตาม pageSize */
-const pagedBlogs = computed<Blogs[]>(() =>
-  visibleBlogs.value.slice(0, pageSize.value)
-)
-
-/* อัปเดตค่า active (รับจาก child) */
+/** toggle active (รับจาก child) */
 const setActive = (target: Blogs, next: boolean) => { target.active = next }
 </script>
 
@@ -64,7 +167,12 @@ const setActive = (target: Blogs, next: boolean) => { target.active = next }
 
     <BlogsSearch v-model="search" />
 
-    <div class="overflow-x-auto">
+    <!-- loading / error -->
+    <div v-if="loading" class="p-6 text-center text-gray-500">กำลังโหลด...</div>
+    <div v-else-if="error" class="p-6 text-center text-red-600">{{ error }}</div>
+
+    <!-- content -->
+    <div v-else class="overflow-x-auto">
       <!-- Desktop Table -->
       <div class="hidden md:block min-w-[720px]">
         <table class="w-full border-collapse table-auto">
