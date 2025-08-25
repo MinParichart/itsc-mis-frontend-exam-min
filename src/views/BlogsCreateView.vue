@@ -5,82 +5,83 @@ import { useRouter } from "vue-router"
 
 const router = useRouter()
 
-const API_BASE = import.meta.env.VITE_API_BASE as string
-// ถ้าไม่ได้ตั้ง env แยก ให้โพสต์ที่ /blogs เป็นค่าเริ่มต้น
-const BLOGS_CREATE = (import.meta.env.VITE_API_BLOGS_CREATE as string) || "/blogs"
-
-type Form = {
-  title: string
-  body: string
-  image: File | null
+interface ApiErrorPayload {
+  message?: string
+  error?: string
+  errors?: Record<string, unknown>
 }
 
-const form = reactive<Form>({
-  title: "",
-  body: "",
-  image: null,
-})
+// base & path (มี default ถ้ายังไม่มี .env)
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || "https://exam-api.dev.mis.cmu.ac.th/api"
+const BLOGS_INDEX = (import.meta.env.VITE_API_BLOGS_INDEX as string) || "/blogs"
+const AUTH_HEADER: Record<string, string> = { Authorization: `Bearer ${localStorage.getItem("token") || ""}` }
 
+// ----- form state -----
+type Form = { title: string; content: string; file: File | null }
+const form = reactive<Form>({ title: "", content: "", file: null })
+const touched = reactive({ title: false, content: false, file: false })
 const loading = ref(false)
-const touched = reactive({ title: false, body: false, image: false })
-const previewUrl = ref<string | null>(null)
+const apiError = ref<string | null>(null)
+const preview = ref<string | null>(null)
 
-function onPickFile(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0] || null
-  form.image = file
-  touched.image = true
-  previewUrl.value = file ? URL.createObjectURL(file) : null
-}
-
+// ----- validation -----
 const errors = computed(() => {
-  const title = !form.title.trim()
-    ? "กรุณากรอกหัวข้อ"
-    : form.title.trim().length < 3
-    ? "หัวข้อต้องยาวอย่างน้อย 3 ตัวอักษร"
-    : ""
+  const e = { title: "", content: "", file: "" }
+  if (!form.title.trim()) e.title = "กรุณากรอกหัวข้อ"
+  else if (form.title.trim().length < 3) e.title = "หัวข้อต้องยาวอย่างน้อย 3 ตัวอักษร"
 
-  const body = !form.body.trim()
-    ? "กรุณากรอกเนื้อหา"
-    : form.body.trim().length < 10
-    ? "เนื้อหาต้องยาวอย่างน้อย 10 ตัวอักษร"
-    : ""
+  if (!form.content.trim()) e.content = "กรุณากรอกเนื้อหา"
+  else if (form.content.trim().length < 10) e.content = "เนื้อหาต้องยาวอย่างน้อย 10 ตัวอักษร"
 
-  let image = ""
-  if (form.image) {
-    if (!form.image.type.startsWith("image/")) image = "อัปโหลดได้เฉพาะไฟล์รูปภาพ"
-    else if (form.image.size > 2 * 1024 * 1024) image = "ขนาดไฟล์รูปสูงสุด 2 MB"
+  if (form.file) {
+    if (!form.file.type.startsWith("image/")) e.file = "อัปโหลดได้เฉพาะไฟล์รูปภาพ"
+    else if (form.file.size > 2 * 1024 * 1024) e.file = "ขนาดไฟล์สูงสุด 2 MB"
   }
-
-  return { title, body, image }
+  return e
 })
+const isValid = computed(() => !errors.value.title && !errors.value.content && !errors.value.file)
 
-const isValid = computed(() => !errors.value.title && !errors.value.body && !errors.value.image)
+// ----- handlers -----
+function onPick(e: Event) {
+  const f = (e.target as HTMLInputElement).files?.[0] || null
+  form.file = f
+  touched.file = true
+  preview.value = f ? URL.createObjectURL(f) : null
+}
 
 async function onSubmit() {
-  touched.title = touched.body = true
+  touched.title = touched.content = true
+  apiError.value = null
   if (!isValid.value) return
 
   try {
     loading.value = true
 
+    // ตามสเปก: ถ้าอัปโหลดรูป ให้ใช้ multipart/form-data → ใช้วิธีนี้เสมอได้เลย
     const fd = new FormData()
     fd.append("title", form.title.trim())
-    fd.append("content", form.body.trim()) // 👈 ถ้า API ใช้ชื่อ field อื่น เช่น "body" ให้แก้ตรงนี้
-    if (form.image) fd.append("image", form.image)
+    fd.append("content", form.content.trim())
+    if (form.file) fd.append("blog_img", form.file) // ชื่อฟิลด์ตามเอกสาร
 
-    await Axios.post(`${API_BASE}${BLOGS_CREATE}`, fd, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-      },
+    await Axios.post(`${API_BASE}${BLOGS_INDEX}`, fd, {
+      headers: { ...AUTH_HEADER, "Content-Type": "multipart/form-data" },
     })
 
-    // เสร็จแล้วกลับหน้า list
+    // สำเร็จ → กลับหน้า list
     router.push({ name: "blogs" })
-  } catch (err) {
-    console.error(err)
-    alert("บันทึกไม่สำเร็จ กรุณาลองใหม่")
+  } catch (e: unknown) {
+    let msg = 'บันทึกไม่สำเร็จ'
+    if (Axios.isAxiosError<ApiErrorPayload>(e)) {
+      msg = e.response?.data?.message
+        ?? e.response?.data?.error
+        ?? e.message
+        ?? msg
+    } else if (e instanceof Error) {
+      msg = e.message
+    } else {
+      msg = String(e)
+    }
+    apiError.value = msg
   } finally {
     loading.value = false
   }
@@ -89,53 +90,45 @@ async function onSubmit() {
 
 <template>
   <div class="max-w-5xl mx-auto">
-    <div class="bg-white shadow-sm rounded-xl p-6">
-      <h1 class="text-xl font-semibold mb-6">เพิ่มบทความ</h1>
+    <div class="flex items-center justify-between mb-4">
+      <RouterLink :to="{ name: 'blogs-create' }" class="text-xl font-semibold">เพิ่มบทความ</RouterLink>
+      <RouterLink :to="{ name: 'blogs' }" class="text-blue-600 hover:underline">ย้อนกลับ</RouterLink>
+    </div>
 
-      <form @submit.prevent="onSubmit" class="space-y-5">
-        <!-- หัวข้อ -->
+    <div class="bg-white shadow rounded-xl p-6">
+      <form class="space-y-5" @submit.prevent="onSubmit">
+        <!-- title -->
         <div>
           <label class="block mb-1 font-medium">หัวข้อ <span class="text-red-500">*</span></label>
-          <input
-            v-model="form.title"
-            @blur="touched.title = true"
-            type="text"
+          <input v-model="form.title" @blur="touched.title = true" type="text"
             class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="ใส่หัวข้อบทความ"
-          />
+            placeholder="ใส่หัวข้อบทความ" />
           <p v-if="touched.title && errors.title" class="text-sm text-red-600 mt-1">{{ errors.title }}</p>
         </div>
 
-        <!-- เนื้อหา -->
+        <!-- content -->
         <div>
           <label class="block mb-1 font-medium">เนื้อหา <span class="text-red-500">*</span></label>
-          <textarea
-            v-model="form.body"
-            @blur="touched.body = true"
-            rows="6"
+          <textarea v-model="form.content" @blur="touched.content = true" rows="8"
             class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="พิมพ์เนื้อหา…"
-          />
-          <p v-if="touched.body && errors.body" class="text-sm text-red-600 mt-1">{{ errors.body }}</p>
+            placeholder="พิมพ์เนื้อหา…" />
+          <p v-if="touched.content && errors.content" class="text-sm text-red-600 mt-1">{{ errors.content }}</p>
         </div>
 
-        <!-- รูปภาพ -->
+        <!-- image -->
         <div>
           <label class="block mb-1 font-medium">รูปภาพ (ไม่บังคับ)</label>
-          <input type="file" accept="image/*" @change="onPickFile" class="block w-full" />
-          <p v-if="touched.image && errors.image" class="text-sm text-red-600 mt-1">{{ errors.image }}</p>
-
-          <div v-if="previewUrl" class="mt-3">
-            <img :src="previewUrl" alt="preview" class="h-32 rounded-lg object-cover" />
-          </div>
+          <input type="file" accept="image/*" @change="onPick" class="block w-full" />
+          <p v-if="touched.file && errors.file" class="text-sm text-red-600 mt-1">{{ errors.file }}</p>
+          <img v-if="preview" :src="preview" alt="preview" class="mt-3 h-32 rounded-lg object-cover" />
         </div>
 
+        <!-- api error -->
+        <div v-if="apiError" class="text-red-600 text-sm">{{ apiError }}</div>
+
         <div class="pt-2">
-          <button
-            type="submit"
-            :disabled="loading || !isValid"
-            class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium px-6 py-2.5 rounded-lg"
-          >
+          <button type="submit" :disabled="loading || !isValid"
+            class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium px-6 py-2.5 rounded-lg">
             {{ loading ? "กำลังบันทึก..." : "บันทึก" }}
           </button>
         </div>
