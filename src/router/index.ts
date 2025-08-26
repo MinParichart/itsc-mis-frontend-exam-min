@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router"
 
 const BlogsView        = () => import("@/views/BlogsView.vue")
 const BlogsCreateView  = () => import("@/views/BlogsCreateView.vue")
+const BlogsUpdateView  = () => import("@/views/BlogsUpdateView.vue") // << add
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,6 +14,9 @@ const router = createRouter({
 
     // create (วางก่อน :id)
     { path: "/blogs/create", name: "blogs-create", component: BlogsCreateView },
+
+    // วางก่อน /blogs/:id เสมอ
+    { path: "/blogs/:id/update", name: "blogs-update", component: BlogsUpdateView },
 
     // by id (บังคับเลขเท่านั้น กันชนกับ 'create')
     { path: "/blogs/:id(\\d+)", name: "blogs_id", component: BlogsView },

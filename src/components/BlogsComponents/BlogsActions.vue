@@ -61,14 +61,16 @@ const emit  = defineEmits<{
         ✏️
       </button>
 
+      <!-- แสดงเสมอ แต่ปิดการกดเมื่อยังเผยแพร่ -->
       <button
-        v-if="!active"
-        class="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200"
-        title="ลบ"
-        @click="$emit('delete')"
-      >
-        🗑
-      </button>
+        :disabled="active"
+        class="p-2 rounded transition-colors"
+        :class="active
+          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          : 'bg-red-100 text-red-600 hover:bg-red-200'"
+        :title="active ? 'ต้องซ่อนก่อนจึงจะลบได้' : 'ลบ'"
+        @click="!active && $emit('delete')"
+      >🗑</button>
     </div>
   </div>
 </template>
