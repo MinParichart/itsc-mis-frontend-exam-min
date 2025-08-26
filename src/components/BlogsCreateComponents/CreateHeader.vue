@@ -12,11 +12,6 @@ import NavbarForAll from '@/components/NavbarForAll.vue';
       <span class="mx-2 opacity-70">/</span>
       <span class="font-medium">เพิ่มบทความ</span>
     </template>
-
-    <!-- ปุ่มย้อนกลับมุมขวา (ถ้าต้องการบน navbar) -->
-    <template #right>
-      <RouterLink to="/blogs" class="text-white/90 hover:underline text-sm">ย้อนกลับ</RouterLink>
-    </template>
   </NavbarForAll>
 
   <div class="container mx-auto max-w-5xl px-4 py-6">

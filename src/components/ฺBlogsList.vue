@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { PencilSquareIcon } from '@heroicons/vue/24/solid'
 import Axios from 'axios'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+
 import BlogsCard from './BlogsComponents/BlogsCard.vue'
 import BlogsFooter from './BlogsComponents/BlogsFooter.vue'
 import BlogsHeader from './BlogsComponents/BlogsHeader.vue'
@@ -16,6 +18,7 @@ interface Blogs {
   date: string
   thumbnail?: string
   active: boolean
+  content?: string
 }
 
 /* ================= API types ================= */
@@ -33,22 +36,22 @@ interface ApiBlog {
   Img?: ApiImage
 }
 interface ApiListResp { totalItems: number; rows: ApiBlog[]; totalPages: number; currentPage: number }
-interface ApiAltResp  { data: ApiBlog[] }
+interface ApiAltResp { data: ApiBlog[] }
 interface ApiErrorPayload { message?: string; error?: string }
 
 /* ================= State ================= */
 const route = useRoute()
-const showAll  = ref(false)
-const search   = ref('')
+const showAll = ref(false)
+const search = ref('')
 const pageSize = ref(10)
-const blogs    = ref<Blogs[]>([])
-const loading  = ref(false)
-const error    = ref<string | null>(null)
+const blogs = ref<Blogs[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 /* ================= Config ================= */
-const API_BASE    = (import.meta.env.VITE_API_BASE as string)        || 'https://exam-api.dev.mis.cmu.ac.th/api'
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'https://exam-api.dev.mis.cmu.ac.th/api'
 const BLOGS_INDEX = (import.meta.env.VITE_API_BLOGS_INDEX as string) || '/blogs'
-const AUTH_HEADER: Record<string,string> = { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
+const AUTH_HEADER: Record<string, string> = { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
 const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '')
 
 /* ================= Helpers ================= */
@@ -73,10 +76,11 @@ function mapApiBlog(b: ApiBlog): Blogs {
     date: toThaiDate(b.createdAt),
     thumbnail: fixImgUrl(b.img?.url ?? b.Img?.url),
     active: Boolean(b.active),
+    content: typeof b.content === 'string' ? b.content : '',
   }
 }
 function isApiListResp(x: unknown): x is ApiListResp { return !!x && typeof x === 'object' && 'rows' in x }
-function isApiAltResp (x: unknown): x is ApiAltResp  { return !!x && typeof x === 'object' && 'data' in x }
+function isApiAltResp(x: unknown): x is ApiAltResp { return !!x && typeof x === 'object' && 'data' in x }
 
 /* อ่าน id จาก URL ถ้ามี */
 const idParam = computed<number | null>(() => {
@@ -85,6 +89,9 @@ const idParam = computed<number | null>(() => {
   const n = Number(v)
   return Number.isFinite(n) ? n : null
 })
+
+/* ส่งชื่อเรื่องขึ้นไปไว้ทำ breadcrumb */
+const emit = defineEmits<{ 'detail-title': [string] }>()
 
 /* ========== เรียก list (/blogs) ========== */
 async function fetchList(): Promise<void> {
@@ -109,12 +116,14 @@ async function fetchList(): Promise<void> {
         ? payload.data
         : []
   blogs.value = rows.map(mapApiBlog)
+  emit('detail-title', '') // เคลียร์ breadcrumb title ตอนกลับหน้า list
 }
 
 /* ========== เรียก by id (/blogs/:id) ========== */
 async function fetchById(id: number): Promise<void> {
   const { data } = await Axios.get<ApiBlog>(`${API_BASE}${BLOGS_INDEX}/${id}`, { headers: AUTH_HEADER })
   blogs.value = [mapApiBlog(data)]
+  emit('detail-title', blogs.value[0]?.title || '')
 }
 
 /* ========== เลือกว่าจะดึงแบบไหน ========== */
@@ -123,9 +132,9 @@ async function refresh(): Promise<void> {
   error.value = null
   try {
     if (idParam.value !== null) {
-      await fetchById(idParam.value)   // มี id ใน URL → ดึงตัวเดียว
+      await fetchById(idParam.value)   // มี id → ดึงตัวเดียว
     } else {
-      await fetchList()                 // ไม่มี id → ดึงเป็น list
+      await fetchList()                 // ไม่มี id → ดึง list
     }
   } catch (e: unknown) {
     let msg = 'โหลดข้อมูลไม่สำเร็จ'
@@ -145,7 +154,6 @@ watch([showAll, pageSize, search, () => route.params.id], refresh)
 
 /* ================= Client filters (ใช้เฉพาะตอน list) ================= */
 const visibleBlogs = computed<Blogs[]>(() => {
-  // ถ้าเป็นโหมดดูตามไอดี ให้โชว์ทั้งก้อน ไม่ต้องกรอง
   if (idParam.value !== null) return blogs.value
   return blogs.value.filter(b => b.title.toLowerCase().includes(search.value.toLowerCase()))
 })
@@ -154,63 +162,105 @@ const pagedBlogs = computed<Blogs[]>(() => {
   return visibleBlogs.value.slice(0, pageSize.value)
 })
 
-/* toggle active (รับจาก child) */
+/* toggle active */
 const setActive = (target: Blogs, next: boolean) => { target.active = next }
 </script>
 
 <template>
-  <div class="container mx-auto shadow rounded-lg p-4 my-5">
-    <BlogsHeader>
-      <div class="flex items-center gap-2">
-        <BlogsToggle v-model="showAll" />
-        <span class="text-sm">แสดงทั้งหมด</span>
+  <!-- จำกัดความกว้างรวม -->
+  <div class="max-w-5xl mx-auto px-4 my-6">
+    <!-- โหมดรายการ -->
+    <template v-if="!$route.params.id">
+      <div class="shadow rounded-lg p-4 bg-white">
+        <BlogsHeader>
+          <div class="flex items-center gap-2">
+            <BlogsToggle v-model="showAll" />
+            <span class="text-sm">แสดงทั้งหมด</span>
+          </div>
+        </BlogsHeader>
+
+        <BlogsSearch v-model="search" />
+
+        <div v-if="loading" class="p-6 text-center text-gray-500">กำลังโหลด...</div>
+        <div v-else-if="error" class="p-6 text-center text-red-600">{{ error }}</div>
+
+        <div v-else class="overflow-x-auto">
+          <!-- Desktop Table -->
+          <div class="hidden md:block min-w-[720px]">
+            <table class="w-full border-collapse table-auto">
+              <thead>
+                <tr class="bg-gray-100 text-left text-sm text-gray-600">
+                  <th class="p-2 w-12"><input type="checkbox" /></th>
+                  <th class="p-2">หัวข้อ</th>
+                  <th class="p-2 text-right"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="blog in pagedBlogs" :key="blog.id">
+                  <BlogsItem :blog="blog" @update:active="(v) => setActive(blog, v)" @share="() => { }"
+                    @edit="() => { }" @delete="() => { }" @pin="() => { }" />
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Cards -->
+          <div class="md:hidden space-y-4">
+            <BlogsCard v-for="blog in pagedBlogs" :key="blog.id" :blog="blog" @update:active="(v) => setActive(blog, v)"
+              @share="() => { }" @edit="() => { }" @delete="() => { }" @pin="() => { }" />
+          </div>
+        </div>
+
+        <BlogsFooter :total="pagedBlogs.length" v-model:pageSize="pageSize" />
       </div>
-    </BlogsHeader>
+    </template>
 
-    <BlogsSearch v-if="!$route.params.id" v-model="search" />
+    <!-- โหมดรายละเอียด: /blogs/:id -->
+    <template v-else>
+      <div v-if="loading" class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">กำลังโหลด...</div>
+      <div v-else-if="error" class="p-6 text-center text-red-600 bg-white rounded-lg shadow">{{ error }}</div>
 
-    <div v-if="loading" class="p-6 text-center text-gray-500">กำลังโหลด...</div>
-    <div v-else-if="error" class="p-6 text-center text-red-600">{{ error }}</div>
+      <div v-else-if="blogs.length" class="bg-white rounded-xl border border-gray-200 shadow">
+        <!-- หัวเรื่อง + วันที่ + สถานะ + ปุ่มแก้ไข -->
+        <div class="px-6 py-4 flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <h1 class="text-xl font-semibold leading-snug text-gray-800 truncate">
+              {{ blogs[0].title }}
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">📅 {{ blogs[0].date }}</p>
+          </div>
 
-    <div v-else class="overflow-x-auto">
-      <div class="hidden md:block min-w-[720px]">
-        <table class="w-full border-collapse table-auto">
-          <thead>
-            <tr class="bg-gray-100 text-left text-sm text-gray-600">
-              <th class="p-2 w-12"><input type="checkbox" /></th>
-              <th class="p-2">หัวข้อ</th>
-              <th class="p-2 text-right"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="blog in pagedBlogs" :key="blog.id">
-              <BlogsItem
-                :blog="blog"
-                @update:active="(v)=>setActive(blog, v)"
-                @share="() => {}"
-                @edit="() => {}"
-                @delete="() => {}"
-                @pin="() => {}"
-              />
-            </template>
-          </tbody>
-        </table>
+          <div class="flex items-center gap-4 shrink-0">
+            <div class="text-sm text-gray-600">
+              <span class="mr-1">สถานะ:</span>
+              <span :class="blogs[0].active ? 'text-green-600 font-medium' : 'text-gray-400'">
+                {{ blogs[0].active ? 'เผยแพร่' : 'ซ่อน' }}
+              </span>
+            </div>
+            <!-- ปุ่มแก้ไข (ลิงก์ไปหน้า create พร้อม query id ชั่วคราว) -->
+            <RouterLink :to="{ name: 'blogs-create', query: { id: String(blogs[0].id) } }"
+              class="text-blue-600 hover:underline text-sm" title="แก้ไขบทความ">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-orange-500 text-white">
+                <PencilSquareIcon class="w-4 h-4" />
+              </span>
+            </RouterLink>
+          </div>
+        </div>
+
+        <!-- รูป + เนื้อหา -->
+        <div class="px-6 py-6">
+          <img v-if="blogs[0].thumbnail" :src="blogs[0].thumbnail" alt=""
+            class="mx-auto mb-6 max-h-72 object-contain rounded" />
+          <!-- เส้นคั่นย้ายลงมาที่นี่ -->
+          <hr class="border-t border-gray-200 my-4" />
+
+          <p class="whitespace-pre-line leading-7 text-gray-700">
+            {{ blogs[0].content || '' }}
+          </p>
+        </div>
       </div>
 
-      <div class="md:hidden space-y-4">
-        <BlogsCard
-          v-for="blog in pagedBlogs"
-          :key="blog.id"
-          :blog="blog"
-          @update:active="(v)=>setActive(blog, v)"
-          @share="() => {}"
-          @edit="() => {}"
-          @delete="() => {}"
-          @pin="() => {}"
-        />
-      </div>
-    </div>
-
-    <BlogsFooter v-if="!$route.params.id" :total="pagedBlogs.length" v-model:pageSize="pageSize" />
+      <div v-else class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">ไม่พบบทความนี้</div>
+    </template>
   </div>
 </template>
