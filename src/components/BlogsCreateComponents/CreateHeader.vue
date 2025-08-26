@@ -1,30 +1,25 @@
+<!-- src/views/BlogsCreateView.vue -->
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-const router = useRouter()
-
-function logout() {
-  localStorage.removeItem('token')
-  router.push('/login')
-}
+import BlogsCreate from '@/components/BlogsCreate.vue'; // = ไฟล์ฟอร์มของคุณ
+import NavbarForAll from '@/components/NavbarForAll.vue';
 </script>
 
 <template>
-  <!-- แถบหัวเรื่องของหน้าสร้างบทความ -->
-  <div class="flex items-center justify-between mb-4">
-    <!-- breadcrumb -->
-    <nav class="text-sm">
-      <RouterLink to="/blogs" class="text-gray-500 hover:underline">บทความ</RouterLink>
-      <span class="mx-1 text-gray-400">/</span>
-      <span class="text-gray-800 font-medium">เพิ่มบทความ</span>
-    </nav>
+  <NavbarForAll :show-logout="true">
+    <!-- breadcrumb อยู่บนแถบน้ำเงิน -->
+    <template #left>
+      <RouterLink to="/blogs" class="opacity-90 hover:underline">บทความ</RouterLink>
+      <span class="mx-2 opacity-70">/</span>
+      <span class="font-medium">เพิ่มบทความ</span>
+    </template>
 
-    <!-- ออกจากระบบ -->
-    <button
-      class="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm"
-      @click="logout"
-      aria-label="ออกจากระบบ"
-    >
-      ออกจากระบบ
-    </button>
+    <!-- ปุ่มย้อนกลับมุมขวา (ถ้าต้องการบน navbar) -->
+    <template #right>
+      <RouterLink to="/blogs" class="text-white/90 hover:underline text-sm">ย้อนกลับ</RouterLink>
+    </template>
+  </NavbarForAll>
+
+  <div class="container mx-auto max-w-5xl px-4 py-6">
+    <BlogsCreate />
   </div>
 </template>

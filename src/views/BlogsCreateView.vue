@@ -1,11 +1,23 @@
 <script setup lang="ts">
-import CreateForm from '@/components/BlogsCreateComponents/CreateForm.vue';
+import BlogsCreate from '@/components/BlogsCreate.vue';
+import BreadcrumbBar from '@/components/BlogsCreateComponents/BreadcrumbBar.vue';
 import NavbarForAll from '@/components/NavbarForAll.vue';
 </script>
 
 <template>
-  <NavbarForAll />  <!-- แถบน้ำเงินด้านบน -->
-  <div class="container mx-auto my-6 px-4">
-    <CreateForm />   <!-- ฟอร์ม POST /blogs -->
+  <!-- Navbar + breadcrumb -->
+  <NavbarForAll :show-logout="true">
+    <template #left>
+      <BreadcrumbBar>
+        <RouterLink to="/blogs" class="font-semibold hover:underline">บทความ</RouterLink>
+        <span class="opacity-80">/</span>
+        <span class="font-semibold">เพิ่มบทความ</span>
+      </BreadcrumbBar>
+    </template>
+  </NavbarForAll>
+
+  <!-- เนื้อหา: จำกัดความกว้างการ์ด ไม่ให้เต็มจอ -->
+  <div class="container mx-auto max-w-4xl px-4 py-6">
+    <BlogsCreate />
   </div>
 </template>

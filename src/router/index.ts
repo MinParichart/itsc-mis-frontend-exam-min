@@ -1,7 +1,6 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHistory } from "vue-router"
 
-// views
-const BlogsView = () => import("@/views/BlogsView.vue");
+const BlogsView        = () => import("@/views/BlogsView.vue")
 const BlogsCreateView  = () => import("@/views/BlogsCreateView.vue")
 
 const router = createRouter({
@@ -10,19 +9,16 @@ const router = createRouter({
     { path: "/", redirect: "/blogs" },
 
     // list
-    { path: "/blogs", name: "blogs", component: BlogsView }, // << เอา meta ออก
+    { path: "/blogs", name: "blogs", component: BlogsView },
 
-    // ✅ วาง create ก่อนเสมอ    
-     { path: "/blogs/create", name: "blogs-create", component: BlogsCreateView },
+    // create (วางก่อน :id)
+    { path: "/blogs/create", name: "blogs-create", component: BlogsCreateView },
 
-
-    // ✅ บังคับ :id เป็นตัวเลขเท่านั้น เพื่อไม่ชนกับ 'create'
-    { path: "/blogs/:id", name: "blogs_id", component: BlogsView },
+    // by id (บังคับเลขเท่านั้น กันชนกับ 'create')
+    { path: "/blogs/:id(\\d+)", name: "blogs_id", component: BlogsView },
 
     { path: "/:pathMatch(.*)*", redirect: "/blogs" },
   ],
-});
+})
 
-// ปิด guard ชั่วคราว
-// router.beforeEach(() => {})
-export default router;
+export default router
