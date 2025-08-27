@@ -19,6 +19,9 @@ interface Blogs {
   thumbnail?: string
   active: boolean
   content?: string
+  pin: boolean // เพิ่ม
+  createdMs: number //ไว้เป็นคีย์เรีรยงรองลงมา (ล่าสุดก่อน)
+
 }
 
 /* ================= API types ================= */
@@ -36,29 +39,29 @@ interface ApiBlog {
   Img?: ApiImage
 }
 interface ApiListResp { totalItems: number; rows: ApiBlog[]; totalPages: number; currentPage: number }
-interface ApiAltResp  { data: ApiBlog[] }
+interface ApiAltResp { data: ApiBlog[] }
 interface ApiErrorPayload { message?: string; error?: string }
 
 /* ================= State ================= */
 const route = useRoute()
-const showAll  = ref(false)
-const search   = ref('')
+const showAll = ref(false)
+const search = ref('')
 const pageSize = ref(10)
-const blogs    = ref<Blogs[]>([])
-const loading  = ref(false)
-const error    = ref<string | null>(null)
+const blogs = ref<Blogs[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 /* ---- state ของการลบ ---- */
 const confirmOpen = ref(false)
-const deleteId    = ref<number | null>(null)
+const deleteId = ref<number | null>(null)
 const deleteTitle = ref('')
-const deleting    = ref(false)
+const deleting = ref(false)
 const deleteError = ref<string | null>(null)
 
 /* ================= Config ================= */
-const API_BASE    = (import.meta.env.VITE_API_BASE as string)        || 'https://exam-api.dev.mis.cmu.ac.th/api'
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'https://exam-api.dev.mis.cmu.ac.th/api'
 const BLOGS_INDEX = (import.meta.env.VITE_API_BLOGS_INDEX as string) || '/blogs'
-const AUTH_HEADER: Record<string,string> = { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
+const AUTH_HEADER: Record<string, string> = { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
 const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '')
 
 /* ================= Helpers ================= */
@@ -84,10 +87,12 @@ function mapApiBlog(b: ApiBlog): Blogs {
     thumbnail: fixImgUrl(b.img?.url ?? b.Img?.url),
     active: Boolean(b.active),
     content: typeof b.content === 'string' ? b.content : '',
+    pin: Boolean(b.pin), // map ค่าปักหมุด
+    createdMs: b.createdAt ? new Date(b.createdAt).getTime() : 0, // คีย์เรียง
   }
 }
 function isApiListResp(x: unknown): x is ApiListResp { return !!x && typeof x === 'object' && 'rows' in x }
-function isApiAltResp (x: unknown): x is ApiAltResp  { return !!x && typeof x === 'object' && 'data' in x }
+function isApiAltResp(x: unknown): x is ApiAltResp { return !!x && typeof x === 'object' && 'data' in x }
 
 /* อ่าน id จาก URL ถ้ามี */
 const idParam = computed<number | null>(() => {
@@ -98,7 +103,7 @@ const idParam = computed<number | null>(() => {
 })
 
 /* ส่งชื่อเรื่องขึ้นไปไว้ทำ breadcrumb ที่ BlogsView (ถ้าต้องใช้) */
-const emit = defineEmits<{ 'detail-title':[string] }>()
+const emit = defineEmits<{ 'detail-title': [string] }>()
 
 /* ========== เรียก list (/blogs) ========== */
 async function fetchList(): Promise<void> {
@@ -110,7 +115,7 @@ async function fetchList(): Promise<void> {
         page: 1,
         size: pageSize.value,
         q: search.value || undefined,
-        show: showAll.value ? 'all' : 'active',
+        show: 'all',
       },
     }
   )
@@ -157,13 +162,72 @@ async function refresh(): Promise<void> {
 
 /* ================= Lifecycle & Watch ================= */
 onMounted(refresh)
-watch([showAll, pageSize, search, () => route.params.id], refresh)
+watch([pageSize, search, () => route.params.id], refresh) // ตัด showAll, ออก 
 
 /* ================= Client filters (ใช้เฉพาะตอน list) ================= */
 const visibleBlogs = computed<Blogs[]>(() => {
+  // โหมดดูรายละเอียด >> ไม่ต้องกรองอะไร 
   if (idParam.value !== null) return blogs.value
-  return blogs.value.filter(b => b.title.toLowerCase().includes(search.value.toLowerCase()))
+
+  // กรองด้วยคำค้นก่อน
+  const bySearch = blogs.value.filter(b =>
+    b.title.toLowerCase().includes(search.value.toLowerCase())
+  )
+
+  // ถ้า "แสดงทั้งหมด" = true → ส่งคืนทั้งหมด
+  // ถ้า false → แสดงเฉพาะที่ active เท่านั้น
+  // โหมดแสดงทั้งหมด/เฉพาะเผยแพร่
+  const filtered = showAll.value ? bySearch : bySearch.filter(b => b.active)
+
+  // เรียง: ปักหมุดก่อน แล้วค่อยล่าสุดก่อน
+  return filtered.slice().sort((a, b) =>
+    (Number(b.pin) - Number(a.pin)) || (b.createdMs - a.createdMs)
+  )
 })
+
+// ฟังก์ชัน togglePin และเรียกใช้จริง
+// BlogsList.vue
+async function togglePin(blog: Blogs) {
+  const next = !blog.pin
+  const prev = blog.pin
+
+  // optimistic UI
+  blog.pin = next
+  blogs.value = [...blogs.value] // กระตุ้นคำนวณ sort ใหม่
+
+  try {
+    // โหลดของเดิมเพื่อกรอกฟิลด์ที่ API บังคับ
+    const { data } = await Axios.get<ApiBlog>(
+      `${API_BASE}${BLOGS_INDEX}/${blog.id}`,
+      { headers: AUTH_HEADER }
+    )
+
+    // ✅ เลือกอย่างใดอย่างหนึ่งตามแบ็กเอนด์ของคุณ
+
+    // 1) ถ้า API รับ JSON ปกติ:
+    // await Axios.put(
+    //   `${API_BASE}${BLOGS_INDEX}/${blog.id}`,
+    //   { title: data.title ?? '', content: data.content ?? '', pin: next },
+    //   { headers: AUTH_HEADER }
+    // )
+
+    // 2) ถ้า API บังคับ multipart (ตามคู่มือของคุณ):
+    const fd = new FormData()
+    fd.append('title', data.title ?? '')
+    fd.append('content', data.content ?? '')
+    // ถ้าแบ็กเอนด์รองรับการอ่านฟิลด์ pin ใน multipart:
+    fd.append('pin', String(next))
+    await Axios.put(`${API_BASE}${BLOGS_INDEX}/${blog.id}`, fd, {
+      headers: { ...AUTH_HEADER, 'Content-Type': 'multipart/form-data' },
+    })
+  } catch (err) {
+    // ถ้าพลาดให้ rollback
+    blog.pin = prev
+    blogs.value = [...blogs.value]
+    console.error('toggle pin failed:', err)
+  }
+}
+
 const pagedBlogs = computed<Blogs[]>(() => {
   if (idParam.value !== null) return blogs.value
   return visibleBlogs.value.slice(0, pageSize.value)
@@ -226,14 +290,8 @@ async function confirmDelete() {
               </thead>
               <tbody>
                 <template v-for="blog in pagedBlogs" :key="blog.id">
-                  <BlogsItem
-                    :blog="blog"
-                    @update:active="(v)=>setActive(blog, v)"
-                    @share="() => {}"
-                    @edit="() => {}"
-                    @delete="askDelete(blog.id, blog.title)"
-                    @pin="() => {}"
-                  />
+                  <BlogsItem :blog="blog" @update:active="(v) => setActive(blog, v)" @share="() => { }"
+                    @edit="() => { }" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
                 </template>
               </tbody>
             </table>
@@ -241,16 +299,8 @@ async function confirmDelete() {
 
           <!-- Mobile -->
           <div class="md:hidden space-y-4">
-            <BlogsCard
-              v-for="blog in pagedBlogs"
-              :key="blog.id"
-              :blog="blog"
-              @update:active="(v)=>setActive(blog, v)"
-              @share="() => {}"
-              @edit="() => {}"
-              @delete="askDelete(blog.id, blog.title)"
-              @pin="() => {}"
-            />
+            <BlogsCard v-for="blog in pagedBlogs" :key="blog.id" :blog="blog" @update:active="(v) => setActive(blog, v)"
+              @share="() => { }" @edit="() => { }" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
           </div>
         </div>
 
@@ -276,23 +326,17 @@ async function confirmDelete() {
                 {{ blogs[0].active ? 'เผยแพร่' : 'ซ่อน' }}
               </span>
             </div>
-            <RouterLink
-              :to="{ name: 'blogs-update', params: { id: blogs[0].id } }"
+            <RouterLink :to="{ name: 'blogs-update', params: { id: blogs[0].id } }"
               class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-amber-500 text-white hover:bg-amber-600"
-              title="แก้ไขบทความ"
-            >
+              title="แก้ไขบทความ">
               <PencilSquareIcon class="w-4 h-4" />
             </RouterLink>
           </div>
         </div>
 
         <div class="px-6 py-6">
-          <img
-            v-if="blogs[0].thumbnail"
-            :src="blogs[0].thumbnail"
-            alt=""
-            class="mx-auto mb-6 max-h-72 object-contain rounded"
-          />
+          <img v-if="blogs[0].thumbnail" :src="blogs[0].thumbnail" alt=""
+            class="mx-auto mb-6 max-h-72 object-contain rounded" />
           <hr class="border-t border-gray-200 my-4" />
           <p class="whitespace-pre-line leading-7 text-gray-700">
             {{ blogs[0].content || '' }}
@@ -304,12 +348,7 @@ async function confirmDelete() {
     </template>
 
     <!-- ===== Confirm Delete Modal ===== -->
-    <div
-      v-if="confirmOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-    >
+    <div v-if="confirmOpen" class="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
       <!-- backdrop -->
       <div class="absolute inset-0 bg-black/40"></div>
 
@@ -325,20 +364,12 @@ async function confirmDelete() {
         <p v-if="deleteError" class="text-center text-sm text-red-600 mt-2">{{ deleteError }}</p>
 
         <div class="mt-5 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
-            @click="confirmOpen=false"
-            :disabled="deleting"
-          >
+          <button type="button" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+            @click="confirmOpen = false" :disabled="deleting">
             ยกเลิก
           </button>
-          <button
-            type="button"
-            class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
-            @click="confirmDelete"
-            :disabled="deleting"
-          >
+          <button type="button" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+            @click="confirmDelete" :disabled="deleting">
             {{ deleting ? 'กำลังลบ...' : 'ลบ' }}
           </button>
         </div>

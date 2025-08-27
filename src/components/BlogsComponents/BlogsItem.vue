@@ -7,6 +7,7 @@ interface Blogs {
   date: string
   thumbnail?: string
   active: boolean
+  pinned?: boolean
 }
 
 const props = defineProps<{ blog: Blogs }>()
@@ -60,6 +61,7 @@ const onImgErr = (e: Event) => { (e.target as HTMLImageElement).src = fallback }
     <td class="p-2">
       <BlogsActions
         :active="props.blog.active"
+        :pinned="(props as any).blog.pin"
         @update:active="(v)=>emit('update:active', v)"
         @share="emit('share')"
         @edit="emit('edit')"

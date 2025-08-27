@@ -7,8 +7,9 @@ interface Blogs {
   date: string
   thumbnail?: string
   active: boolean
+  pinned? : boolean
 }
-const props = defineProps<{ blog : Blogs }>()
+const props = defineProps<{ blog : Blogs ;}>()
 const emit  = defineEmits<{
   'update:active':[boolean],
   share:[], edit:[], delete:[], pin:[]
@@ -34,6 +35,7 @@ const emit  = defineEmits<{
     <div class="mt-3">
       <BlogsActions
         :active="props.blog.active"
+        :pinned="(props as any).blog.pin"
         @update:active="(v)=>emit('update:active', v)"
         @share="emit('share')"
         @edit="emit('edit')"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const props = defineProps<{ active: boolean }>()
+const props = defineProps<{ active: boolean; pinned? : boolean }>()
 const emit  = defineEmits<{
   'update:active':[boolean],
   share:[], edit:[], delete:[], pin:[]
@@ -13,7 +13,10 @@ const emit  = defineEmits<{
     <div class="flex items-center gap-2">
       <!-- ปักหมุด -->
       <button
-        class="p-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+        :class="props.pinned
+        ? 'p-2 rounded bg-blue-500 text-white hover:bg-blue-600'
+        : 'p-2 rounded bg-blue-100 text-blue-600 hover:bg-blue-200'"
+        :aria-pressed="props.pinned ? 'true' : 'false'"
         title="ปักหมุด"
         @click="$emit('pin')"
       >
@@ -25,19 +28,19 @@ const emit  = defineEmits<{
         <input
           type="checkbox"
           class="hidden"
-          :checked="active"
-          @change="$emit('update:active', !active)"
+          :checked="props.active"
+          @change="$emit('update:active', !props.active)"
         />
         <div
           class="w-10 h-5 rounded-full relative transition-colors"
-          :class="active ? 'bg-blue-500' : 'bg-gray-300'"
+          :class="props.active ? 'bg-blue-500' : 'bg-gray-300'"
         >
           <div
             class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
             :class="{ 'translate-x-5': active }"
           />
         </div>
-        <span class="text-sm font-medium" :class="active ? 'text-green-600' : 'text-gray-500'">
+        <span class="text-sm font-medium" :class="props.active ? 'text-green-600' : 'text-gray-500'">
           {{ active ? 'เผยแพร่' : 'ซ่อน' }}
         </span>
       </label>
