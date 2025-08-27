@@ -2,7 +2,7 @@
 import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/solid'
 import Axios from 'axios'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import BlogsCard from './BlogsComponents/BlogsCard.vue'
 import BlogsFooter from './BlogsComponents/BlogsFooter.vue'
@@ -236,6 +236,13 @@ const pagedBlogs = computed<Blogs[]>(() => {
 /* toggle active (จาก child) */
 const setActive = (target: Blogs, next: boolean) => { target.active = next }
 
+/* ---------- Edit or Update in BlogsList.vue ---------- */
+const router = useRouter()
+
+function goEdit(id: number) {
+  router.push({ name: 'blogs-update', params: { id } })
+}
+
 /* ---------- ลบ: modal + API ---------- */
 function askDelete(targetId: number, title: string) {
   deleteId.value = targetId
@@ -243,6 +250,7 @@ function askDelete(targetId: number, title: string) {
   deleteError.value = null
   confirmOpen.value = true
 }
+
 async function confirmDelete() {
   if (deleteId.value == null) return
   try {
@@ -291,7 +299,7 @@ async function confirmDelete() {
               <tbody>
                 <template v-for="blog in pagedBlogs" :key="blog.id">
                   <BlogsItem :blog="blog" @update:active="(v) => setActive(blog, v)" @share="() => { }"
-                    @edit="() => { }" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
+                    @edit="goEdit(blog.id)" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
                 </template>
               </tbody>
             </table>
@@ -300,7 +308,7 @@ async function confirmDelete() {
           <!-- Mobile -->
           <div class="md:hidden space-y-4">
             <BlogsCard v-for="blog in pagedBlogs" :key="blog.id" :blog="blog" @update:active="(v) => setActive(blog, v)"
-              @share="() => { }" @edit="() => { }" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
+              @share="() => { }" @edit="goEdit(blog.id)" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
           </div>
         </div>
 

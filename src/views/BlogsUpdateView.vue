@@ -18,12 +18,6 @@ const id = Number(route.params.id)
       </BreadcrumbBar>
     </template>
 
-    <template #right>
-      <RouterLink :to="{ name: 'blogs_id', params: { id } }"
-                  class="text-white/90 hover:underline text-sm">
-        ย้อนกลับ
-      </RouterLink>
-    </template>
   </NavbarForAll>
 
   <div class="container mx-auto max-w-5xl px-4 py-6">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PencilSquareIcon } from '@heroicons/vue/24/solid';
 const props = defineProps<{ active: boolean; pinned? : boolean }>()
 const emit  = defineEmits<{
   'update:active':[boolean],
@@ -61,7 +62,7 @@ const emit  = defineEmits<{
         title="แก้ไข"
         @click="$emit('edit')"
       >
-        ✏️
+        <PencilSquareIcon class="w-4 h-4" />
       </button>
 
       <!-- แสดงเสมอ แต่ปิดการกดเมื่อยังเผยแพร่ -->
