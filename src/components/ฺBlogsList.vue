@@ -243,6 +243,11 @@ function goEdit(id: number) {
   router.push({ name: 'blogs-update', params: { id } })
 }
 
+/* ---------- Detail in BlogsList.vue ---------- */
+function goView(id: number) {
+  router.push({ name: 'blogs_id', params: { id } })
+}
+
 /* ---------- ลบ: modal + API ---------- */
 function askDelete(targetId: number, title: string) {
   deleteId.value = targetId
@@ -298,7 +303,7 @@ async function confirmDelete() {
               </thead>
               <tbody>
                 <template v-for="blog in pagedBlogs" :key="blog.id">
-                  <BlogsItem :blog="blog" @update:active="(v) => setActive(blog, v)" @share="() => { }"
+                  <BlogsItem :blog="blog" @update:active="(v) => setActive(blog, v)" @view="goView(blog.id)"
                     @edit="goEdit(blog.id)" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
                 </template>
               </tbody>
@@ -308,7 +313,7 @@ async function confirmDelete() {
           <!-- Mobile -->
           <div class="md:hidden space-y-4">
             <BlogsCard v-for="blog in pagedBlogs" :key="blog.id" :blog="blog" @update:active="(v) => setActive(blog, v)"
-              @share="() => { }" @edit="goEdit(blog.id)" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
+              @view="goView(blog.id)" @edit="goEdit(blog.id)" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
           </div>
         </div>
 

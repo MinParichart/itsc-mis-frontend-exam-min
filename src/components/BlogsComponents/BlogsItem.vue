@@ -13,7 +13,7 @@ interface Blogs {
 const props = defineProps<{ blog: Blogs }>()
 const emit  = defineEmits<{
   'update:active':[boolean],
-  share:[], edit:[], delete:[], pin:[]
+  view:[], edit:[], delete:[], pin:[]
 }>()
 
 // รูป fallback กันเคสไม่มีรูป/โหลดพัง
@@ -63,7 +63,7 @@ const onImgErr = (e: Event) => { (e.target as HTMLImageElement).src = fallback }
         :active="props.blog.active"
         :pinned="(props as any).blog.pin"
         @update:active="(v)=>emit('update:active', v)"
-        @share="emit('share')"
+        @view="emit('view')"
         @edit="emit('edit')"
         @delete="emit('delete')"
         @pin="emit('pin')"
