@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BreadcrumbBar from '@/components/BlogsCreateComponents/BreadcrumbBar.vue'
 import NavbarForAll from '@/components/NavbarForAll.vue'
-import BlogsList from '@/components/ฺBlogsList.vue'
+import BlogsList from '@/components/BlogsList.vue'
 
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
