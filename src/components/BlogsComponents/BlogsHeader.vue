@@ -1,6 +1,7 @@
 <template>
   <div class="flex items-center justify-between mb-4">
     <div class="flex items-center space-x-2">
+      <!-- แสดงความว่า บทความ หน้า BlogList -->
       <h2 class="text-lg font-bold">บทความ</h2>
 
       <!-- เปลี่ยน button เป็น RouterLink  -->
@@ -11,7 +12,8 @@
       </RouterLink>
 
     </div>
-    <!-- toggle จะถูกส่งเข้ามาทาง slot -->
+
+    <!-- toggle แสดงทั้งหมด จะถูกส่งเข้ามาทาง slot -->
     <slot />
   </div>
 </template>

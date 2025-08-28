@@ -1,7 +1,7 @@
 <script setup lang="ts">
-const props = defineProps<{ modelValue: boolean }>()
-const emit  = defineEmits<{ 'update:modelValue':[boolean] }>()
-const toggle = () => emit('update:modelValue', !props.modelValue)
+const props = defineProps<{ modelValue: boolean }>();
+const emit = defineEmits<{ "update:modelValue": [boolean] }>();
+const toggle = () => emit("update:modelValue", !props.modelValue);
 </script>
 
 <template>
@@ -10,6 +10,7 @@ const toggle = () => emit('update:modelValue', !props.modelValue)
     :class="modelValue ? 'bg-blue-500' : 'bg-gray-300'"
     @click="toggle"
   >
+    <!-- จุดขาวใน toggle แสดงทั้งหมด -->
     <div
       class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-300"
       :class="{ 'translate-x-5': modelValue }"
