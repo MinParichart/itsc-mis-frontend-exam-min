@@ -61,7 +61,7 @@ const onImgErr = (e: Event) => { (e.target as HTMLImageElement).src = fallback }
     <td class="p-2">
       <BlogsActions
         :active="props.blog.active"
-        :pinned="(props as any).blog.pin"
+        :pinned="props.blog.pinned ?? false"
         @update:active="(v)=>emit('update:active', v)"
         @view="emit('view')"
         @edit="emit('edit')"

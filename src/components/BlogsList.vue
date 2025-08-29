@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { PencilSquareIcon, TrashIcon } from "@heroicons/vue/24/solid";
+import { TrashIcon } from "@heroicons/vue/24/solid";
 import Axios from "axios";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import BlogsCard from "./BlogsComponents/BlogsCard.vue";
+import BlogsDetail from "./BlogsComponents/BlogsDetail.vue";
 import BlogsFooter from "./BlogsComponents/BlogsFooter.vue";
 import BlogsHeader from "./BlogsComponents/BlogsHeader.vue";
 import BlogsItem from "./BlogsComponents/BlogsItem.vue";
 import BlogsSearch from "./BlogsComponents/BlogsSearch.vue";
 import BlogsToggle from "./BlogsComponents/BlogsToggle.vue";
 
-/* ================= UI model ================= */
+/*  UI model  */
 interface Blogs {
   id: number;
   title: string;
@@ -23,7 +24,7 @@ interface Blogs {
   createdMs: number; //ไว้เป็นคีย์เรียงรองลงมา (ล่าสุดก่อน)
 }
 
-/* ================= API types ================= */
+/*  API types  */
 type ApiImage = { url?: string };
 
 interface ApiBlog {
@@ -55,7 +56,7 @@ interface ApiErrorPayload {
   error?: string;
 }
 
-/* ================= State ================= */
+/*  State  */
 const router = useRouter();
 const route = useRoute();
 const showAll = ref(false);
@@ -65,14 +66,14 @@ const blogs = ref<Blogs[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
-/* ================= State ของการลบ  ================= */
+/*  State ของการลบ   */
 const confirmOpen = ref(false);
 const deleteId = ref<number | null>(null);
 const deleteTitle = ref("");
 const deleting = ref(false);
 const deleteError = ref<string | null>(null);
 
-/* ================= Config ================= */
+/*  Config  */
 const API_BASE =
   (import.meta.env.VITE_API_BASE as string) ||
   "https://exam-api.dev.mis.cmu.ac.th/api";
@@ -86,7 +87,7 @@ const AUTH_HEADER: Record<string, string> = {
 
 const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
 
-/* ================= Helpers ================= */
+/*  Helpers  */
 function toThaiDate(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -132,7 +133,7 @@ function isApiAltResp(x: unknown): x is ApiAltResp {
   return !!x && typeof x === "object" && "data" in x;
 }
 
-/* ================= อ่าน id จาก URL ถ้ามี  ================= */
+/*  อ่าน id จาก URL ถ้ามี   */
 const idParam = computed<number | null>(() => {
   const v = route.params.id;
   if (v == null) return null;
@@ -140,10 +141,10 @@ const idParam = computed<number | null>(() => {
   return Number.isFinite(n) ? n : null;
 });
 
-/* ================= ส่งชื่อเรื่องขึ้นไปไว้ทำ breadcrumb ที่ BlogsView (ถ้าต้องใช้) ================= */
+/*  ส่งชื่อเรื่องขึ้นไปไว้ทำ breadcrumb ที่ BlogsView (ถ้าต้องใช้)  */
 const emit = defineEmits<{ "detail-title": [string] }>();
 
-/* ========== เรียก list (/blogs) ========== */
+/* เรียก list (/blogs) */
 async function fetchList(): Promise<void> {
   const res = await Axios.get<ApiListResp | ApiAltResp | ApiBlog[]>(
     `${API_BASE}${BLOGS_INDEX}`,
@@ -161,15 +162,15 @@ async function fetchList(): Promise<void> {
   const rows: ApiBlog[] = Array.isArray(payload)
     ? payload
     : isApiListResp(payload)
-    ? payload.rows
-    : isApiAltResp(payload)
-    ? payload.data
-    : [];
+      ? payload.rows
+      : isApiAltResp(payload)
+        ? payload.data
+        : [];
   blogs.value = rows.map(mapApiBlog);
   emit("detail-title", "");
 }
 
-/* ========== เรียก by id (/blogs/:id) ========== */
+/* เรียก by id (/blogs/:id) */
 async function fetchById(id: number): Promise<void> {
   const { data } = await Axios.get<ApiBlog>(`${API_BASE}${BLOGS_INDEX}/${id}`, {
     headers: AUTH_HEADER,
@@ -178,7 +179,7 @@ async function fetchById(id: number): Promise<void> {
   emit("detail-title", blogs.value[0]?.title || "");
 }
 
-/* ========== เลือกว่าจะดึงแบบไหน ========== */
+/* เลือกว่าจะดึงแบบไหน */
 async function refresh(): Promise<void> {
   loading.value = true;
   error.value = null;
@@ -201,11 +202,11 @@ async function refresh(): Promise<void> {
   }
 }
 
-/* ================= Lifecycle & Watch ================= */
+/*  Lifecycle & Watch  */
 onMounted(refresh);
 watch([pageSize, search, () => route.params.id], refresh); // ตัด showAll, ออก
 
-/* ================= Client filters (ใช้เฉพาะตอน list) ================= */
+/*  Client filters (ใช้เฉพาะตอน list)  */
 const visibleBlogs = computed<Blogs[]>(() => {
   // โหมดดูรายละเอียด >> ไม่ต้องกรองอะไร
   if (idParam.value !== null) return blogs.value;
@@ -326,6 +327,7 @@ async function confirmDelete() {
       <div class="shadow rounded-lg p-4 bg-white">
         <BlogsHeader>
           <div class="flex items-center gap-2">
+            <!-- ส่ง BlogsToggle เข้าไปใน slot ของ BlogsHeader -->
             <BlogsToggle v-model="showAll" />
             <span class="text-sm">แสดงทั้งหมด</span>
           </div>
@@ -353,14 +355,8 @@ async function confirmDelete() {
               </thead>
               <tbody>
                 <template v-for="blog in pagedBlogs" :key="blog.id">
-                  <BlogsItem
-                    :blog="blog"
-                    @update:active="(v) => setActive(blog, v)"
-                    @view="goView(blog.id)"
-                    @edit="goEdit(blog.id)"
-                    @delete="askDelete(blog.id, blog.title)"
-                    @pin="togglePin(blog)"
-                  />
+                  <BlogsItem :blog="blog" @update:active="(v) => setActive(blog, v)" @view="goView(blog.id)"
+                    @edit="goEdit(blog.id)" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
                 </template>
               </tbody>
             </table>
@@ -368,16 +364,9 @@ async function confirmDelete() {
 
           <!-- Mobile -->
           <div class="md:hidden space-y-4">
-            <BlogsCard
-              v-for="blog in pagedBlogs"
-              :key="blog.id"
-              :blog="blog"
-              @update:active="(v) => setActive(blog, v)"
-              @view="goView(blog.id)"
-              @edit="goEdit(blog.id)"
-              @delete="askDelete(blog.id, blog.title)"
-              @pin="togglePin(blog)"
-            />
+            <BlogsCard v-for="blog in pagedBlogs" :key="blog.id" :blog="blog" @update:active="(v) => setActive(blog, v)"
+              @view="goView(blog.id)" @edit="goEdit(blog.id)" @delete="askDelete(blog.id, blog.title)"
+              @pin="togglePin(blog)" />
           </div>
         </div>
 
@@ -387,92 +376,30 @@ async function confirmDelete() {
 
     <!-- โหมดรายละเอียด: /blogs/:id -->
     <template v-else>
-      <div
-        v-if="loading"
-        class="p-6 text-center text-gray-500 bg-white rounded-lg shadow"
-      >
+      <div v-if="loading" class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">
         กำลังโหลด...
       </div>
-      <div
-        v-else-if="error"
-        class="p-6 text-center text-red-600 bg-white rounded-lg shadow"
-      >
+      <div v-else-if="error" class="p-6 text-center text-red-600 bg-white rounded-lg shadow">
         {{ error }}
       </div>
 
-      <div
-        v-else-if="blogs.length"
-        class="bg-white rounded-xl border border-gray-200 shadow"
-      >
-        <div class="px-6 py-4 flex items-start justify-between gap-4">
-          <div class="min-w-0">
-            <h1
-              class="text-xl font-semibold leading-snug text-gray-800 truncate"
-            >
-              {{ blogs[0].title }}
-            </h1>
-            <p class="text-sm text-gray-500 mt-1">📅 {{ blogs[0].date }}</p>
-          </div>
-          <div class="flex items-center gap-4 shrink-0">
-            <div class="text-sm text-gray-600">
-              <span class="mr-1">สถานะ:</span>
-              <span
-                :class="
-                  blogs[0].active
-                    ? 'text-green-600 font-medium'
-                    : 'text-gray-400'
-                "
-              >
-                {{ blogs[0].active ? "เผยแพร่" : "ซ่อน" }}
-              </span>
-            </div>
-            <RouterLink
-              :to="{ name: 'blogs-update', params: { id: blogs[0].id } }"
-              class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-amber-500 text-white hover:bg-amber-600"
-              title="แก้ไขบทความ"
-            >
-              <PencilSquareIcon class="w-4 h-4" />
-            </RouterLink>
-          </div>
-        </div>
-
-        <div class="px-6 py-6">
-          <img
-            v-if="blogs[0].thumbnail"
-            :src="blogs[0].thumbnail"
-            alt=""
-            class="mx-auto mb-6 max-h-72 object-contain rounded"
-          />
-          <hr class="border-t border-gray-200 my-4" />
-          <p class="whitespace-pre-line leading-7 text-gray-700">
-            {{ blogs[0].content || "" }}
-          </p>
-        </div>
+      <div v-else-if="blogs.length">
+        <BlogsDetail :blog="blogs[0]" />
       </div>
 
-      <div
-        v-else
-        class="p-6 text-center text-gray-500 bg-white rounded-lg shadow"
-      >
+      <div v-else class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">
         ไม่พบบทความนี้
       </div>
     </template>
 
-    <!-- ===== Confirm Delete Modal ===== -->
-    <div
-      v-if="confirmOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-    >
+    <!--  Confirm Delete Modal  -->
+    <div v-if="confirmOpen" class="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
       <!-- backdrop -->
       <div class="absolute inset-0 bg-black/40"></div>
 
       <!-- dialog -->
       <div class="relative bg-white w-[92%] max-w-md rounded-2xl shadow-xl p-6">
-        <div
-          class="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3"
-        >
+        <div class="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
           <TrashIcon class="w-6 h-6 text-red-600" />
         </div>
         <h3 class="text-lg font-semibold text-center">ลบข้อมูล</h3>
@@ -485,25 +412,17 @@ async function confirmDelete() {
         </p>
 
         <div class="mt-5 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
-            @click="confirmOpen = false"
-            :disabled="deleting"
-          >
+          <button type="button" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+            @click="confirmOpen = false" :disabled="deleting">
             ยกเลิก
           </button>
-          <button
-            type="button"
-            class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
-            @click="confirmDelete"
-            :disabled="deleting"
-          >
+          <button type="button" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+            @click="confirmDelete" :disabled="deleting">
             {{ deleting ? "กำลังลบ..." : "ลบ" }}
           </button>
         </div>
       </div>
     </div>
-    <!-- ===== /Confirm Delete Modal ===== -->
+    <!--  /Confirm Delete Modal  -->
   </div>
 </template>

@@ -21,6 +21,7 @@ const router = createRouter({
     // by id (บังคับเลขเท่านั้น กันชนกับ 'create')
     { path: "/blogs/:id(\\d+)", name: "blogs_id", component: BlogsView },
 
+    // จับ ทุก URL ที่ไม่ตรงกับเส้นทางอื่น แล้ว เปลี่ยนเส้นทาง (redirect) ไปที่ /blogs
     { path: "/:pathMatch(.*)*", redirect: "/blogs" },
   ],
 })

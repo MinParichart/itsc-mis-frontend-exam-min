@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Axios from "axios"
-import { computed, onMounted, reactive, ref } from "vue"
+import { computed, onMounted, reactive, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 const route = useRoute()
@@ -56,6 +56,8 @@ type ApiBlog = {
   Img?: ApiImg
 }
 
+const emit = defineEmits<{ 'detail-title':[string] }>()
+
 async function loadBlog() {
   loading.value = true
   apiError.value = null
@@ -64,6 +66,8 @@ async function loadBlog() {
     form.title = String(data.title ?? "")
     form.content = String(data.content ?? "")
     preview.value = fixImgUrl(data.img?.url ?? data.Img?.url) || null
+    // ✅ ส่งชื่อเรื่องขึ้นไปให้ parent ใส่ breadcrumb
+    emit('detail-title', form.title.trim())
   } catch (e: any) {
     apiError.value =
       (Axios.isAxiosError(e) && (e.response?.data?.message || e.response?.data?.error)) ||
@@ -72,7 +76,12 @@ async function loadBlog() {
     loading.value = false
   }
 }
+
 onMounted(loadBlog)
+
+// (ออปชัน) ถ้าต้องการให้ breadcrumb เปลี่ยนตามที่ผู้ใช้พิมพ์หัวข้อ
+watch(() => form.title, (t) => emit('detail-title', (t || '').trim()))
+
 
 /* ----- handlers ----- */
 function onPick(e: Event) {

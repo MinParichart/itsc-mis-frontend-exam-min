@@ -1,7 +1,7 @@
 <!-- src/views/BlogsCreateView.vue -->
 <script setup lang="ts">
-import BlogsCreate from '@/components/BlogsCreate.vue'; // = ไฟล์ฟอร์มของคุณ
-import NavbarForAll from '@/components/NavbarForAll.vue';
+import BlogsCreate from '@/components/BlogsComponents/BlogsCreate.vue'; // = ไฟล์ฟอร์มของคุณ
+import NavbarForAll from '@/components/BlogsComponents/NavbarForAll.vue';
 </script>
 
 <template>

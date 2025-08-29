@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import BreadcrumbBar from '@/components/BlogsCreateComponents/BreadcrumbBar.vue'
-import NavbarForAll from '@/components/NavbarForAll.vue'
+import BreadcrumbBar from '@/components/BlogsComponents/BreadcrumbBar.vue'
+import NavbarForAll from '@/components/BlogsComponents/NavbarForAll.vue'
 import BlogsList from '@/components/BlogsList.vue'
 
 import { computed, ref, watch } from 'vue'

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+
 const props = defineProps<{
   open: boolean
   title?: string
@@ -8,7 +9,12 @@ const props = defineProps<{
   danger?: boolean
   loading?: boolean
 }>()
-const emit = defineEmits<{ confirm: []; cancel: [] }>()
+
+const emit = defineEmits<{ 
+  confirm: []; 
+  cancel: [] 
+}>()
+
 function onBackdrop(e: MouseEvent) {
   if (e.target === e.currentTarget) emit('cancel')
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import BlogsCreate from '@/components/BlogsCreate.vue';
-import BreadcrumbBar from '@/components/BlogsCreateComponents/BreadcrumbBar.vue';
-import NavbarForAll from '@/components/NavbarForAll.vue';
+import BlogsCreate from '@/components/BlogsComponents/BlogsCreate.vue';
+import BreadcrumbBar from '@/components/BlogsComponents/BreadcrumbBar.vue';
+import NavbarForAll from '@/components/BlogsComponents/NavbarForAll.vue';
 </script>
 
 <template>
