@@ -9,7 +9,7 @@ interface Blogs {
   date: string
   thumbnail?: string
   active: boolean
-  pinned?: boolean
+  pin?: boolean
 }
 
 // กำหนดชนิดของพร็อพที่ component นี้ “รับเข้ามา” จากพาเรนต์
@@ -40,7 +40,7 @@ const emit = defineEmits<{
     <div class="mt-3">
       <BlogsActions 
       :active="props.blog.active" 
-      :pinned="props.blog.pinned"
+      :pin="props.blog.pin"
       @update:active="(v) => emit('update:active', v)" 
       @share="emit('share')" @edit="emit('edit')"
       @delete="emit('delete')" @pin="emit('pin')" />

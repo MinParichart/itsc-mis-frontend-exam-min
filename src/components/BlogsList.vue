@@ -73,7 +73,7 @@ const deleteTitle = ref("");
 const deleting = ref(false);
 const deleteError = ref<string | null>(null);
 
-/*  Config  */
+/*  Config - Move to Service  */
 const API_BASE =
   (import.meta.env.VITE_API_BASE as string) ||
   "https://exam-api.dev.mis.cmu.ac.th/api";
