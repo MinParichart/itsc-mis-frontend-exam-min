@@ -405,7 +405,7 @@ async function confirmDelete() {
         <h3 class="text-lg font-semibold text-center">ลบข้อมูล</h3>
         <p class="text-center text-sm text-gray-600 mt-1">
           ยืนยันการลบบทความ
-          <span class="font-medium">“{{ deleteTitle }}”</span> หรือไม่
+          <span class="font-medium inline-block max-w-full break-all">“{{ deleteTitle }}”</span> หรือไม่
         </p>
         <p v-if="deleteError" class="text-center text-sm text-red-600 mt-2">
           {{ deleteError }}
