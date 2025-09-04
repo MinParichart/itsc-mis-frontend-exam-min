@@ -1,6 +1,6 @@
 <script setup lang="ts">
-const props = defineProps<{ total: number; pageSize: number }>()
-const emit  = defineEmits<{ 'update:pageSize':[number] }>()
+const props = defineProps<{ total: number; pageSize: number }>();
+const emit = defineEmits<{ "update:pageSize": [number] }>();
 </script>
 
 <template>
@@ -10,7 +10,9 @@ const emit  = defineEmits<{ 'update:pageSize':[number] }>()
       <span>จำนวนต่อหน้า</span>
       <select
         :value="pageSize"
-        @change="emit('update:pageSize', +($event.target as HTMLSelectElement).value)"
+        @change="
+          emit('update:pageSize', +($event.target as HTMLSelectElement).value)
+        "
         class="border rounded px-2 py-1"
       >
         <option :value="5">5</option>

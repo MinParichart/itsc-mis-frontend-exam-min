@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { PencilSquareIcon } from '@heroicons/vue/24/solid'
+import { PencilSquareIcon } from "@heroicons/vue/24/solid";
 
 interface Blog {
-  id: number
-  title: string
-  date: string
-  active: boolean
-  thumbnail?: string
-  content?: string
+  id: number;
+  title: string;
+  date: string;
+  active: boolean;
+  thumbnail?: string;
+  content?: string;
 }
-const props = defineProps<{ blog: Blog }>()
+const props = defineProps<{ blog: Blog }>();
 
 // กันรูปพัง/ไม่มีรูป
-const fallback = 'https://placehold.co/640x360?text=No+Image'
-const onErr = (e: Event) => ((e.target as HTMLImageElement).src = fallback)
+const fallback = "https://placehold.co/640x360?text=No+Image";
+const onErr = (e: Event) => ((e.target as HTMLImageElement).src = fallback);
 </script>
 
 <template>
-<div class="bg-white rounded-xl border border-gray-200 shadow">
+  <div class="bg-white rounded-xl border border-gray-200 shadow">
     <!-- Header -->
     <div class="px-6 py-4 flex items-start justify-between gap-4">
       <div class="min-w-0">
@@ -30,8 +30,12 @@ const onErr = (e: Event) => ((e.target as HTMLImageElement).src = fallback)
       <div class="flex items-center gap-4 shrink-0">
         <div class="text-sm text-gray-600">
           <span class="mr-1">สถานะ:</span>
-          <span :class="props.blog.active ? 'text-green-600 font-medium' : 'text-gray-400'">
-            {{ props.blog.active ? 'เผยแพร่' : 'ซ่อน' }}
+          <span
+            :class="
+              props.blog.active ? 'text-green-600 font-medium' : 'text-gray-400'
+            "
+          >
+            {{ props.blog.active ? "เผยแพร่" : "ซ่อน" }}
           </span>
         </div>
 
@@ -56,7 +60,8 @@ const onErr = (e: Event) => ((e.target as HTMLImageElement).src = fallback)
       />
       <hr class="border-t border-gray-200 my-4" />
       <p class="whitespace-pre-line leading-7 text-gray-700">
-        {{ props.blog.content || '' }}
+        {{ props.blog.content || "" }}
       </p>
     </div>
-  </div></template>
+  </div>
+</template>

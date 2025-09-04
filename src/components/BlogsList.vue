@@ -20,13 +20,12 @@ interface Blogs {
   thumbnail?: string;
   active: boolean;
   content?: string;
-  pin: boolean; // เพิ่ม
-  createdMs: number; //ไว้เป็นคีย์เรียงรองลงมา (ล่าสุดก่อน)
+  pin: boolean;
+  createdMs: number;
 }
 
 /*  API types  */
 type ApiImage = { url?: string };
-
 interface ApiBlog {
   id: number | string;
   title?: string;
@@ -39,18 +38,15 @@ interface ApiBlog {
   img?: ApiImage;
   Img?: ApiImage;
 }
-
 interface ApiListResp {
   totalItems: number;
   rows: ApiBlog[];
   totalPages: number;
   currentPage: number;
 }
-
 interface ApiAltResp {
   data: ApiBlog[];
 }
-
 interface ApiErrorPayload {
   message?: string;
   error?: string;
@@ -73,7 +69,7 @@ const deleteTitle = ref("");
 const deleting = ref(false);
 const deleteError = ref<string | null>(null);
 
-// state สำหรับ “ลบหลายรายการ”
+/* multiple select */
 const selectedIds = ref<number[]>([]);
 const bulkMode = ref(false);
 
@@ -82,37 +78,31 @@ const currentPage = ref<number>(1);
 const totalPages = ref<number>(1);
 const totalItems = ref<number>(0);
 
-/*  Config - Move to Service  */
+/*  Config  */
 const API_BASE =
   (import.meta.env.VITE_API_BASE as string) ||
   "https://exam-api.dev.mis.cmu.ac.th/api";
-
 const BLOGS_INDEX =
   (import.meta.env.VITE_API_BLOGS_INDEX as string) || "/blogs";
-
 const AUTH_HEADER: Record<string, string> = {
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 };
-
 const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
 
 /*  Helpers  */
 function toThaiDate(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
-  const date = d.toLocaleDateString("th-TH", {
+  return `${d.toLocaleDateString("th-TH", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  });
-  const time = d.toLocaleTimeString("th-TH", {
+  })} ${d.toLocaleTimeString("th-TH", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  });
-  return `${date} ${time} น.`;
+  })} น.`;
 }
-
 function fixImgUrl(u?: string): string | undefined {
   if (!u) return undefined;
   const clean = u.replace(/\\/g, "/").replace(/^\/+/, "/");
@@ -120,7 +110,6 @@ function fixImgUrl(u?: string): string | undefined {
   const origin = API_ORIGIN.replace(/\/+$/, "");
   return `${origin}${clean.startsWith("/") ? "" : "/"}${clean}`;
 }
-
 function mapApiBlog(b: ApiBlog): Blogs {
   return {
     id: Number(b.id),
@@ -129,15 +118,13 @@ function mapApiBlog(b: ApiBlog): Blogs {
     thumbnail: fixImgUrl(b.img?.url ?? b.Img?.url),
     active: Boolean(b.active),
     content: typeof b.content === "string" ? b.content : "",
-    pin: Boolean(b.pin), // map ค่าปักหมุด
-    createdMs: b.createdAt ? new Date(b.createdAt).getTime() : 0, // คีย์เรียง
+    pin: Boolean(b.pin),
+    createdMs: b.createdAt ? new Date(b.createdAt).getTime() : 0,
   };
 }
-
 function isApiListResp(x: unknown): x is ApiListResp {
   return !!x && typeof x === "object" && "rows" in x;
 }
-
 function isApiAltResp(x: unknown): x is ApiAltResp {
   return !!x && typeof x === "object" && "data" in x;
 }
@@ -150,12 +137,8 @@ const idParam = computed<number | null>(() => {
   return Number.isFinite(n) ? n : null;
 });
 
-/*  ส่งชื่อเรื่องขึ้นไปไว้ทำ breadcrumb ที่ BlogsView (ถ้าต้องใช้)  */
+/* breadcrumb (ถ้าต้องใช้) */
 const emit = defineEmits<{ "detail-title": [string] }>();
-
-//  เคลียร์ selection ที่ไม่อยู่ในผลลัพธ์ปัจจุบัน (กันหลงหน้า/หลงผลการค้นหา)
-const currentIds = new Set(blogs.value.map((b) => b.id));
-selectedIds.value = selectedIds.value.filter((id) => currentIds.has(id));
 
 /* เรียก list (/blogs) + pagination */
 async function fetchList(): Promise<void> {
@@ -164,10 +147,10 @@ async function fetchList(): Promise<void> {
     {
       headers: AUTH_HEADER,
       params: {
-        page: currentPage.value, // ✅ ใช้หน้าปัจจุบัน
-        size: pageSize.value, // ✅ จำนวนต่อหน้า
+        page: currentPage.value,
+        size: pageSize.value,
         q: search.value || undefined,
-        show: showAll.value ? "all" : "active", // ตรงกับ toggle
+        show: showAll.value ? "all" : "active",
       },
     }
   );
@@ -185,9 +168,17 @@ async function fetchList(): Promise<void> {
 
   blogs.value = rows.map(mapApiBlog);
   emit("detail-title", "");
+
+  /* CHANGE 1: เคลียร์ selection ที่อยู่นอกผลลัพธ์ หรือรายการที่ “เผยแพร่” */
+  const idSet = new Set(blogs.value.map((b) => b.id));
+  selectedIds.value = selectedIds.value.filter((id) => {
+    const b = blogs.value.find((x) => x.id === id);
+    return idSet.has(id) && b && !b.active;
+  });
+  /* /CHANGE 1 */
 }
 
-// รีเฟรชเมื่อเปลี่ยนหน้า / เปลี่ยนขนาดต่อหน้า / เปลี่ยนคำค้น
+/* watchers เพื่อรีเฟรช */
 watch(currentPage, refresh);
 watch([pageSize, search], () => {
   currentPage.value = 1;
@@ -213,11 +204,7 @@ async function refresh(): Promise<void> {
   loading.value = true;
   error.value = null;
   try {
-    if (idParam.value !== null) {
-      await fetchById(idParam.value);
-    } else {
-      await fetchList();
-    }
+    idParam.value !== null ? await fetchById(idParam.value) : await fetchList();
   } catch (e: unknown) {
     let msg = "โหลดข้อมูลไม่สำเร็จ";
     if (Axios.isAxiosError<ApiErrorPayload>(e))
@@ -231,150 +218,129 @@ async function refresh(): Promise<void> {
   }
 }
 
-/*  Lifecycle & Watch  */
+/*  Lifecycle  */
 onMounted(refresh);
 
-/*  Client filters (ใช้เฉพาะตอน list)  */
+/* client filters */
 const visibleBlogs = computed<Blogs[]>(() => {
-  // เริ่มจากรายการที่โหลดมา
   let list = blogs.value;
-
-  // กรองสถานะ (แสดงทั้งหมด/เฉพาะ active) ฝั่ง client
-  if (!showAll.value) {
-    list = list.filter((b) => b.active);
-  }
-
-  // กรองคำค้น
+  if (!showAll.value) list = list.filter((b) => b.active);
   const q = search.value.trim().toLowerCase();
-  if (q) {
-    list = list.filter((b) => b.title.toLowerCase().includes(q));
-  }
-
-  // เรียง: ปักหมุดก่อน แล้วล่าสุดก่อน
+  if (q) list = list.filter((b) => b.title.toLowerCase().includes(q));
   return list
     .slice()
     .sort((a, b) => Number(b.pin) - Number(a.pin) || b.createdMs - a.createdMs);
 });
+const pagedBlogs = computed<Blogs[]>(() =>
+  idParam.value !== null ? blogs.value : visibleBlogs.value
+);
 
-// ฟังก์ชัน togglePin และเรียกใช้จริง
-// BlogsList.vue
+/* ---------- Multiple select constraints ---------- */
+/* CHANGE 2: id ที่ “เลือกได้” บนหน้าปัจจุบัน = เฉพาะที่ซ่อนอยู่ */
+const eligibleIdsOnPage = computed<number[]>(() =>
+  pagedBlogs.value.filter((b) => !b.active).map((b) => b.id)
+);
+/* /CHANGE 2 */
+
+/* CHANGE 3: isSelected ไม่ต้องเปลี่ยน แต่ toggleSelect จะกันเลือก item ที่เผยแพร่ */
+const isSelected = (id: number) => selectedIds.value.includes(id);
+function toggleSelect(id: number, checked: boolean) {
+  const target = blogs.value.find((b) => b.id === id);
+  if (!target || target.active) return; // กันติ๊กถ้าเผยแพร่
+  const set = new Set(selectedIds.value);
+  checked ? set.add(id) : set.delete(id);
+  selectedIds.value = [...set];
+}
+/* /CHANGE 3 */
+
+/* CHANGE 4: สถานะ some/all อิงจาก “eligibleIdsOnPage” เท่านั้น */
+const someSelected = computed(() =>
+  selectedIds.value.some((id) => eligibleIdsOnPage.value.includes(id))
+);
+const allSelected = computed(
+  () =>
+    eligibleIdsOnPage.value.length > 0 &&
+    eligibleIdsOnPage.value.every((id) => selectedIds.value.includes(id))
+);
+function toggleSelectAll(checked: boolean) {
+  const set = new Set(selectedIds.value);
+  if (checked) eligibleIdsOnPage.value.forEach((id) => set.add(id));
+  else eligibleIdsOnPage.value.forEach((id) => set.delete(id));
+  selectedIds.value = [...set];
+}
+/* /CHANGE 4 */
+
+/* ---------- Pin ---------- */
 async function togglePin(blog: Blogs) {
   const next = !blog.pin;
   const prev = blog.pin;
-
-  // optimistic UI
   blog.pin = next;
-  blogs.value = [...blogs.value]; // กระตุ้นคำนวณ sort ใหม่
-
+  blogs.value = [...blogs.value];
   try {
-    // โหลดของเดิมเพื่อกรอกฟิลด์ที่ API บังคับ
     const { data } = await Axios.get<ApiBlog>(
       `${API_BASE}${BLOGS_INDEX}/${blog.id}`,
       { headers: AUTH_HEADER }
     );
-
-    // ✅ เลือกอย่างใดอย่างหนึ่งตามแบ็กเอนด์ของคุณ
-
-    // 1) ถ้า API รับ JSON ปกติ:
-    // await Axios.put(
-    //   `${API_BASE}${BLOGS_INDEX}/${blog.id}`,
-    //   { title: data.title ?? '', content: data.content ?? '', pin: next },
-    //   { headers: AUTH_HEADER }
-    // )
-
-    // 2) ถ้า API บังคับ multipart (ตามคู่มือของคุณ):
     const fd = new FormData();
     fd.append("title", data.title ?? "");
     fd.append("content", data.content ?? "");
-    // ถ้าแบ็กเอนด์รองรับการอ่านฟิลด์ pin ใน multipart:
     fd.append("pin", String(next));
     await Axios.put(`${API_BASE}${BLOGS_INDEX}/${blog.id}`, fd, {
       headers: { ...AUTH_HEADER, "Content-Type": "multipart/form-data" },
     });
   } catch (err) {
-    // ถ้าพลาดให้ rollback
     blog.pin = prev;
     blogs.value = [...blogs.value];
-    console.error("toggle pin failed:", err);
   }
 }
-
-const pagedBlogs = computed<Blogs[]>(() => {
-  if (idParam.value !== null) return blogs.value;
-  return visibleBlogs.value; // ไม่ต้อง slice แล้ว
-});
 
 /* toggle active (จาก child) */
 const setActive = (target: Blogs, next: boolean) => {
   target.active = next;
+  /* CHANGE 5: ถ้าเปลี่ยนเป็นเผยแพร่ ให้เอาออกจาก selection ทันที */
+  if (next)
+    selectedIds.value = selectedIds.value.filter((id) => id !== target.id);
 };
+/* /CHANGE 5 */
 
-/* ---------- Edit or Update in BlogsList.vue ---------- */
-
+/* ไปหน้าอื่น */
 function goEdit(id: number) {
   router.push({ name: "blogs-update", params: { id } });
 }
-
-/* ---------- Detail in BlogsList.vue ---------- */
 function goView(id: number) {
   router.push({ name: "blogs_id", params: { id } });
 }
 
-//  Helpers สำหรับ multiple select
-const isSelected = (id: number) => selectedIds.value.includes(id);
-
-function toggleSelect(id: number, checked: boolean) {
-  const set = new Set(selectedIds.value);
-  checked ? set.add(id) : set.delete(id);
-  selectedIds.value = [...set];
-}
-
-const someSelected = computed(() => selectedIds.value.length > 0);
-
-const allSelected = computed(
-  () =>
-    pagedBlogs.value.length > 0 &&
-    pagedBlogs.value.every((b) => selectedIds.value.includes(b.id))
-);
-
-function toggleSelectAll(checked: boolean) {
-  const pageIds = pagedBlogs.value.map((b) => b.id);
-  const set = new Set(selectedIds.value);
-  if (checked) pageIds.forEach((id) => set.add(id));
-  else pageIds.forEach((id) => set.delete(id));
-  selectedIds.value = [...set];
-}
-
-/* ---------- ลบ: modal + API ---------- */
+/* ---------- ลบ ---------- */
 function askDelete(targetId: number, title: string) {
   deleteId.value = targetId;
   deleteTitle.value = title;
   deleteError.value = null;
-  // โหมดลบเดี่ยว
   bulkMode.value = false;
   confirmOpen.value = true;
 }
-
-// เปิด modal ลบหลายรายการ
 function askBulkDelete() {
-  if (!selectedIds.value.length) return;
+  if (!someSelected.value) return;
+  bulkMode.value = true;
   deleteId.value = null;
   deleteTitle.value = "";
   deleteError.value = null;
-  bulkMode.value = true;
   confirmOpen.value = true;
 }
-
 async function confirmDelete() {
-  // CHANGE 6: รองรับทั้งโหมดเดี่ยวและหลายรายการ
   try {
     deleting.value = true;
-
     if (bulkMode.value) {
-      const ids = [...selectedIds.value];
-      if (!ids.length) return;
+      /* CHANGE 6: ลบเฉพาะ id ที่ “ซ่อนอยู่” เท่านั้น */
+      const ids = selectedIds.value.filter((id) => {
+        const b = blogs.value.find((x) => x.id === id);
+        return b && !b.active;
+      });
+      if (!ids.length) {
+        confirmOpen.value = false;
+        return;
+      }
 
-      // พยายามเรียก /blogs/delete ก่อน
       try {
         await Axios.post(
           `${API_BASE}${BLOGS_INDEX}/delete`,
@@ -382,7 +348,7 @@ async function confirmDelete() {
           { headers: { ...AUTH_HEADER, "Content-Type": "application/json" } }
         );
       } catch {
-        // ถ้า endpoint นี้ไม่พร้อม → fallback ลบรายตัว
+        // fallback
         await Promise.allSettled(
           ids.map((id) =>
             Axios.delete(`${API_BASE}${BLOGS_INDEX}/${id}`, {
@@ -391,22 +357,18 @@ async function confirmDelete() {
           )
         );
       }
-
-      // ตัดออกจาก list และล้าง selection
       blogs.value = blogs.value.filter((b) => !ids.includes(b.id));
-      selectedIds.value = [];
+      selectedIds.value = selectedIds.value.filter((id) => !ids.includes(id));
     } else {
       if (deleteId.value == null) return;
       await Axios.delete(`${API_BASE}${BLOGS_INDEX}/${deleteId.value}`, {
         headers: AUTH_HEADER,
       });
       blogs.value = blogs.value.filter((b) => b.id !== deleteId.value);
-      // เผื่อมีเลือกไว้ ให้เอา id นี้ออกจาก selection
       selectedIds.value = selectedIds.value.filter(
         (id) => id !== deleteId.value
       );
     }
-
     confirmOpen.value = false;
   } catch (e: any) {
     deleteError.value =
@@ -422,22 +384,25 @@ async function confirmDelete() {
 
 <template>
   <div class="max-w-5xl mx-auto px-4 my-6">
-    <!-- โหมดรายการ -->
     <template v-if="!$route.params.id">
       <div class="shadow rounded-lg p-4 bg-white">
         <BlogsHeader>
           <div class="flex items-center gap-2">
-            <!-- ส่ง BlogsToggle เข้าไปใน slot ของ BlogsHeader -->
             <BlogsToggle v-model="showAll" />
             <span class="text-sm">แสดงทั้งหมด</span>
           </div>
         </BlogsHeader>
 
         <BlogsSearch v-model="search" />
-        <!-- แถบแสดงจำนวนที่เลือก + ปุ่ม 'ลบที่เลือก' -->
+
+        <!-- แสดงปุ่มลบเฉพาะเมื่อมีเลือก “ที่ซ่อนอยู่” -->
         <div v-if="someSelected" class="mb-2 flex items-center gap-3">
           <span class="text-sm text-gray-600"
-            >เลือกแล้ว {{ selectedIds.length }} รายการ</span
+            >เลือกแล้ว
+            {{
+              selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length
+            }}
+            รายการ</span
           >
           <button
             class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700"
@@ -461,16 +426,18 @@ async function confirmDelete() {
               <thead>
                 <tr class="bg-gray-100 text-left text-sm text-gray-600">
                   <th class="p-2 w-12">
-                    <!-- header checkbox คุมทั้งหน้า -->
+                    <!-- CHANGE 7: header checkbox เลือกเฉพาะที่ “ซ่อนอยู่” และปิดได้ถ้าไม่มีให้เลือก -->
                     <input
                       type="checkbox"
                       :checked="allSelected"
+                      :disabled="eligibleIdsOnPage.length === 0"
                       @change="
                         toggleSelectAll(
                           ($event.target as HTMLInputElement).checked
                         )
                       "
                     />
+                    <!-- /CHANGE 7 -->
                   </th>
                   <th class="p-2">หัวข้อ</th>
                   <th class="p-2 text-right"></th>
@@ -511,7 +478,6 @@ async function confirmDelete() {
         </div>
 
         <BlogsFooter :total="totalItems" v-model:pageSize="pageSize" />
-        <!-- ✅ ปุ่มเพจจิ้งให้วาง 'ใต้' BlogsFooter และอยู่ 'ด้านใน' บล็อก v-if นี้ -->
         <div class="mt-4 flex items-center justify-end gap-2">
           <button
             class="px-3 py-1 rounded border disabled:opacity-50 hover:bg-sky-200"
@@ -520,9 +486,7 @@ async function confirmDelete() {
           >
             ก่อนหน้า
           </button>
-
           <span class="text-sm">หน้า {{ currentPage }} / {{ totalPages }}</span>
-
           <button
             class="px-3 py-1 rounded border disabled:opacity-50"
             :disabled="currentPage >= totalPages || loading"
@@ -534,7 +498,7 @@ async function confirmDelete() {
       </div>
     </template>
 
-    <!-- โหมดรายละเอียด: /blogs/:id -->
+    <!-- โหมดรายละเอียด -->
     <template v-else>
       <div
         v-if="loading"
@@ -548,11 +512,7 @@ async function confirmDelete() {
       >
         {{ error }}
       </div>
-
-      <div v-else-if="blogs.length">
-        <BlogsDetail :blog="blogs[0]" />
-      </div>
-
+      <div v-else-if="blogs.length"><BlogsDetail :blog="blogs[0]" /></div>
       <div
         v-else
         class="p-6 text-center text-gray-500 bg-white rounded-lg shadow"
@@ -561,30 +521,31 @@ async function confirmDelete() {
       </div>
     </template>
 
-    <!--  Confirm Delete Modal  -->
+    <!-- Confirm Delete Modal -->
     <div
       v-if="confirmOpen"
       class="fixed inset-0 z-50 flex items-center justify-center"
       role="dialog"
       aria-modal="true"
     >
-      <!-- backdrop -->
       <div class="absolute inset-0 bg-black/40"></div>
-
-      <!-- dialog -->
       <div class="relative bg-white w-[92%] max-w-md rounded-2xl shadow-xl p-6">
         <div
           class="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3"
         >
           <TrashIcon class="w-6 h-6 text-red-600" />
         </div>
-        <!-- เปลี่ยนข้อความตามโหมด  -->
+
         <template v-if="bulkMode">
           <h3 class="text-lg font-semibold text-center">
             ลบข้อมูล (หลายรายการ)
           </h3>
           <p class="text-center text-sm text-gray-600 mt-1">
-            ยืนยันการลบ <b>{{ selectedIds.length }}</b> รายการหรือไม่
+            ยืนยันการลบ
+            <b>{{
+              selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length
+            }}</b>
+            รายการหรือไม่
           </p>
         </template>
         <template v-else>
@@ -597,6 +558,7 @@ async function confirmDelete() {
             หรือไม่
           </p>
         </template>
+
         <p v-if="deleteError" class="text-center text-sm text-red-600 mt-2">
           {{ deleteError }}
         </p>
@@ -621,6 +583,5 @@ async function confirmDelete() {
         </div>
       </div>
     </div>
-    <!--  /Confirm Delete Modal  -->
   </div>
 </template>

@@ -1,8 +1,6 @@
 <script setup lang="ts">
-// นำปุ่ม action มาใช้ pin/toogle/active/edit/delete
 import BlogsActions from "./BlogsActions.vue";
 
-// ประกาศชนิดข้อมูลของบล็อกที่คอมโพเนนต์นี้ “คาดหวัง” จะได้รับผ่าน props
 interface Blogs {
   id: number;
   title: string;
@@ -12,37 +10,52 @@ interface Blogs {
   pin?: boolean;
 }
 
-// กำหนดชนิดของพร็อพที่ component นี้ “รับเข้ามา” จากพาเรนต์
-// บอกว่า parent จะส่งวัตถุ blog (ชนิด Blogs) เข้ามาเป็นพร็อพเดียว
+/* CHANGE 11: รับ selected จากพาเรนต์ */
 const props = defineProps<{ blog: Blogs; selected?: boolean }>();
+/* /CHANGE 11 */
 
-// กำหนดอีเวนต์ที่คอมโพเนนต์นี้จะยิงขึ้นไปให้พาเรนต์ เช่น เวลากด pin / edit / delete
 const emit = defineEmits<{
   "update:active": [boolean];
   view: [];
   edit: [];
   delete: [];
   pin: [];
+  /* CHANGE 12: แจ้งพาเรนต์เมื่อติ๊ก/ยกเลิกติ๊ก */
   "toggle-select": [boolean];
 }>();
+/* /CHANGE 12 */
+
+const fallback = "https://placehold.co/64x64?text=No+Img";
+const onImgErr = (e: Event) => {
+  (e.target as HTMLImageElement).src = fallback;
+};
 </script>
 
 <template>
   <div class="border rounded-lg p-3 bg-white shadow-sm">
     <div class="flex items-start gap-3">
+      <!-- CHANGE 13: disable เมื่อเผยแพร่ -->
       <input
         type="checkbox"
         class="mt-2"
-        :checked="props.selected"
+        :checked="!props.blog.active && props.selected"
+        :disabled="props.blog.active"
+        :title="
+          props.blog.active
+            ? 'ต้องซ่อนก่อนถึงจะเลือกเพื่อลบได้'
+            : 'เลือกเพื่อลบ'
+        "
         @change="
           emit('toggle-select', ($event.target as HTMLInputElement).checked)
         "
       />
+      <!-- /CHANGE 13 -->
+
       <img
-        v-if="props.blog.thumbnail"
-        :src="props.blog.thumbnail"
+        :src="props.blog.thumbnail || fallback"
         alt="thumb"
         class="w-16 h-16 rounded object-cover"
+        @error="onImgErr"
       />
       <div class="flex-1 min-w-0">
         <p class="font-bold text-gray-700 truncate">{{ props.blog.title }}</p>

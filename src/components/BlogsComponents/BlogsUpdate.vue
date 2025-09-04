@@ -145,20 +145,40 @@ async function onSubmit() {
     <form v-else class="space-y-6" @submit.prevent="onSubmit">
       <!-- title -->
       <div>
-        <label class="block mb-1 font-medium">หัวข้อ <span class="text-red-500">*</span></label>
-        <input v-model="form.title" @blur="touched.title = true" type="text" placeholder="ระบุหัวข้อบทความ"
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <p v-if="touched.title && errors.title" class="text-sm text-red-600 mt-1">
+        <label class="block mb-1 font-medium"
+          >หัวข้อ <span class="text-red-500">*</span></label
+        >
+        <input
+          v-model="form.title"
+          @blur="touched.title = true"
+          type="text"
+          placeholder="ระบุหัวข้อบทความ"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <p
+          v-if="touched.title && errors.title"
+          class="text-sm text-red-600 mt-1"
+        >
           {{ errors.title }}
         </p>
       </div>
 
       <!-- content -->
       <div>
-        <label class="block mb-1 font-medium">เนื้อหา <span class="text-red-500">*</span></label>
-        <textarea v-model="form.content" @blur="touched.content = true" rows="8" placeholder="พิมพ์เนื้อหา…"
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <p v-if="touched.content && errors.content" class="text-sm text-red-600 mt-1">
+        <label class="block mb-1 font-medium"
+          >เนื้อหา <span class="text-red-500">*</span></label
+        >
+        <textarea
+          v-model="form.content"
+          @blur="touched.content = true"
+          rows="8"
+          placeholder="พิมพ์เนื้อหา…"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <p
+          v-if="touched.content && errors.content"
+          class="text-sm text-red-600 mt-1"
+        >
           {{ errors.content }}
         </p>
       </div>
@@ -166,19 +186,32 @@ async function onSubmit() {
       <!-- image -->
       <div>
         <label class="block mb-1 font-medium">รูปภาพ (ไม่บังคับ)</label>
-        <input type="file" accept="image/*" @change="onPick" class="block w-full" />
+        <input
+          type="file"
+          accept="image/*"
+          @change="onPick"
+          class="block w-full"
+        />
         <p class="text-xs text-gray-500 mt-1">ถ้าไม่อัปโหลด จะคงรูปเดิมไว้</p>
         <p v-if="touched.file && errors.file" class="text-sm text-red-600 mt-1">
           {{ errors.file }}
         </p>
 
-        <img v-if="preview" :src="preview" alt="preview" class="mt-3 h-40 md:h-52 rounded-lg object-contain mx-auto" />
+        <img
+          v-if="preview"
+          :src="preview"
+          alt="preview"
+          class="mt-3 h-40 md:h-52 rounded-lg object-contain mx-auto"
+        />
       </div>
 
       <div v-if="apiError" class="text-red-600 text-sm">{{ apiError }}</div>
 
-      <button type="submit" :disabled="loading || !isValid"
-        class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium py-3 rounded-lg">
+      <button
+        type="submit"
+        :disabled="loading || !isValid"
+        class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium py-3 rounded-lg"
+      >
         {{ loading ? "กำลังบันทึก..." : "บันทึก" }}
       </button>
     </form>
