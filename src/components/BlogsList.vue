@@ -73,6 +73,11 @@ const deleteTitle = ref("");
 const deleting = ref(false);
 const deleteError = ref<string | null>(null);
 
+/* Pagination */
+const currentPage = ref<number>(1);
+const totalPages = ref<number>(1);
+const totalItems = ref<number>(0);
+
 /*  Config - Move to Service  */
 const API_BASE =
   (import.meta.env.VITE_API_BASE as string) ||
@@ -144,31 +149,49 @@ const idParam = computed<number | null>(() => {
 /*  ส่งชื่อเรื่องขึ้นไปไว้ทำ breadcrumb ที่ BlogsView (ถ้าต้องใช้)  */
 const emit = defineEmits<{ "detail-title": [string] }>();
 
-/* เรียก list (/blogs) */
+/* เรียก list (/blogs) + pagination */
 async function fetchList(): Promise<void> {
   const res = await Axios.get<ApiListResp | ApiAltResp | ApiBlog[]>(
     `${API_BASE}${BLOGS_INDEX}`,
     {
       headers: AUTH_HEADER,
       params: {
-        page: 1,
-        size: pageSize.value,
+        page: currentPage.value, // ✅ ใช้หน้าปัจจุบัน
+        size: pageSize.value, // ✅ จำนวนต่อหน้า
         q: search.value || undefined,
-        show: "all",
+        show: showAll.value ? "all" : "active", // ตรงกับ toggle
       },
     }
   );
+
+
+
   const payload = res.data;
   const rows: ApiBlog[] = Array.isArray(payload)
     ? payload
     : isApiListResp(payload)
-      ? payload.rows
+      ? ((totalItems.value = payload.totalItems),
+        (totalPages.value = payload.totalPages),
+        payload.rows)
       : isApiAltResp(payload)
         ? payload.data
         : [];
+
   blogs.value = rows.map(mapApiBlog);
   emit("detail-title", "");
 }
+
+// รีเฟรชเมื่อเปลี่ยนหน้า / เปลี่ยนขนาดต่อหน้า / เปลี่ยนคำค้น
+watch(currentPage, refresh);
+watch([pageSize, search], () => {
+  currentPage.value = 1;
+  refresh();
+});
+watch(() => route.params.id, refresh);
+watch(showAll, () => {
+  currentPage.value = 1;
+  refresh();
+});
 
 /* เรียก by id (/blogs/:id) */
 async function fetchById(id: number): Promise<void> {
@@ -204,25 +227,25 @@ async function refresh(): Promise<void> {
 
 /*  Lifecycle & Watch  */
 onMounted(refresh);
-watch([pageSize, search, () => route.params.id], refresh); // ตัด showAll, ออก
 
 /*  Client filters (ใช้เฉพาะตอน list)  */
 const visibleBlogs = computed<Blogs[]>(() => {
-  // โหมดดูรายละเอียด >> ไม่ต้องกรองอะไร
-  if (idParam.value !== null) return blogs.value;
+  // เริ่มจากรายการที่โหลดมา
+  let list = blogs.value;
 
-  // กรองด้วยคำค้นก่อน
-  const bySearch = blogs.value.filter((b) =>
-    b.title.toLowerCase().includes(search.value.toLowerCase())
-  );
+  // กรองสถานะ (แสดงทั้งหมด/เฉพาะ active) ฝั่ง client
+  if (!showAll.value) {
+    list = list.filter((b) => b.active);
+  }
 
-  // ถ้า "แสดงทั้งหมด" = true → ส่งคืนทั้งหมด
-  // ถ้า false → แสดงเฉพาะที่ active เท่านั้น
-  // โหมดแสดงทั้งหมด/เฉพาะเผยแพร่
-  const filtered = showAll.value ? bySearch : bySearch.filter((b) => b.active);
+  // กรองคำค้น
+  const q = search.value.trim().toLowerCase();
+  if (q) {
+    list = list.filter((b) => b.title.toLowerCase().includes(q));
+  }
 
-  // เรียง: ปักหมุดก่อน แล้วค่อยล่าสุดก่อน
-  return filtered
+  // เรียง: ปักหมุดก่อน แล้วล่าสุดก่อน
+  return list
     .slice()
     .sort((a, b) => Number(b.pin) - Number(a.pin) || b.createdMs - a.createdMs);
 });
@@ -272,7 +295,7 @@ async function togglePin(blog: Blogs) {
 
 const pagedBlogs = computed<Blogs[]>(() => {
   if (idParam.value !== null) return blogs.value;
-  return visibleBlogs.value.slice(0, pageSize.value);
+  return visibleBlogs.value; // ไม่ต้อง slice แล้ว
 });
 
 /* toggle active (จาก child) */
@@ -370,7 +393,21 @@ async function confirmDelete() {
           </div>
         </div>
 
-        <BlogsFooter :total="pagedBlogs.length" v-model:pageSize="pageSize" />
+        <BlogsFooter :total="totalItems" v-model:pageSize="pageSize" />
+        <!-- ✅ ปุ่มเพจจิ้งให้วาง 'ใต้' BlogsFooter และอยู่ 'ด้านใน' บล็อก v-if นี้ -->
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button class="px-3 py-1 rounded border disabled:opacity-50 hover:bg-sky-200"
+            :disabled="currentPage <= 1 || loading" @click="currentPage--">
+            ก่อนหน้า
+          </button>
+
+          <span class="text-sm">หน้า {{ currentPage }} / {{ totalPages }}</span>
+
+          <button class="px-3 py-1 rounded border disabled:opacity-50" :disabled="currentPage >= totalPages || loading"
+            @click="currentPage++">
+            ถัดไป
+          </button>
+        </div>
       </div>
     </template>
 
@@ -405,7 +442,8 @@ async function confirmDelete() {
         <h3 class="text-lg font-semibold text-center">ลบข้อมูล</h3>
         <p class="text-center text-sm text-gray-600 mt-1">
           ยืนยันการลบบทความ
-          <span class="font-medium inline-block max-w-full break-all">“{{ deleteTitle }}”</span> หรือไม่
+          <span class="font-medium inline-block max-w-full break-all">“{{ deleteTitle }}”</span>
+          หรือไม่
         </p>
         <p v-if="deleteError" class="text-center text-sm text-red-600 mt-2">
           {{ deleteError }}
