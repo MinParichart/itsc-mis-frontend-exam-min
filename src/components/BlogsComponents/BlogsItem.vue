@@ -1,30 +1,46 @@
 <script setup lang="ts">
-import BlogsActions from './BlogsActions.vue'
+import BlogsActions from "./BlogsActions.vue";
 
 interface Blogs {
-  id: number
-  title: string
-  date: string
-  thumbnail?: string
-  active: boolean
-  pin?: boolean
+  id: number;
+  title: string;
+  date: string;
+  thumbnail?: string;
+  active: boolean;
+  pin?: boolean;
 }
 
-const props = defineProps<{ blog: Blogs }>()
-const emit  = defineEmits<{
-  'update:active':[boolean],
-  view:[], edit:[], delete:[], pin:[]
-}>()
+// รับสถานะ selected จากพาเรนต์ด้วย
+const props = defineProps<{ blog: Blogs; selected?: boolean }>();
+// เพิ่มอีเวนต์ toggle-select
+const emit = defineEmits<{
+  "update:active": [boolean];
+  view: [];
+  edit: [];
+  delete: [];
+  pin: [];
+  "toggle-select": [boolean];
+}>();
 
 // รูป fallback กันเคสไม่มีรูป/โหลดพัง
-const fallback = 'https://placehold.co/64x64?text=No+Img'
-const onImgErr = (e: Event) => { (e.target as HTMLImageElement).src = fallback }
+const fallback = "https://placehold.co/64x64?text=No+Img";
+const onImgErr = (e: Event) => {
+  (e.target as HTMLImageElement).src = fallback;
+};
 </script>
 
 <template>
   <tr class="border-b border-gray-200 hover:bg-gray-50 text-sm">
     <!-- checkbox -->
-    <td class="p-2"><input type="checkbox" /></td>
+    <td class="p-2">
+      <input
+        type="checkbox"
+        :checked="props.selected"
+        @change="
+          emit('toggle-select', ($event.target as HTMLInputElement).checked)
+        "
+      />
+    </td>
 
     <!-- content -->
     <td class="p-2">
@@ -62,7 +78,7 @@ const onImgErr = (e: Event) => { (e.target as HTMLImageElement).src = fallback }
       <BlogsActions
         :active="props.blog.active"
         :pin="props.blog.pin ?? false"
-        @update:active="(v)=>emit('update:active', v)"
+        @update:active="(v) => emit('update:active', v)"
         @view="emit('view')"
         @edit="emit('edit')"
         @delete="emit('delete')"

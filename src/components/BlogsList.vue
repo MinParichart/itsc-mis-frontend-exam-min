@@ -73,6 +73,10 @@ const deleteTitle = ref("");
 const deleting = ref(false);
 const deleteError = ref<string | null>(null);
 
+// state สำหรับ “ลบหลายรายการ”
+const selectedIds = ref<number[]>([]);
+const bulkMode = ref(false);
+
 /* Pagination */
 const currentPage = ref<number>(1);
 const totalPages = ref<number>(1);
@@ -149,6 +153,10 @@ const idParam = computed<number | null>(() => {
 /*  ส่งชื่อเรื่องขึ้นไปไว้ทำ breadcrumb ที่ BlogsView (ถ้าต้องใช้)  */
 const emit = defineEmits<{ "detail-title": [string] }>();
 
+//  เคลียร์ selection ที่ไม่อยู่ในผลลัพธ์ปัจจุบัน (กันหลงหน้า/หลงผลการค้นหา)
+const currentIds = new Set(blogs.value.map((b) => b.id));
+selectedIds.value = selectedIds.value.filter((id) => currentIds.has(id));
+
 /* เรียก list (/blogs) + pagination */
 async function fetchList(): Promise<void> {
   const res = await Axios.get<ApiListResp | ApiAltResp | ApiBlog[]>(
@@ -164,18 +172,16 @@ async function fetchList(): Promise<void> {
     }
   );
 
-
-
   const payload = res.data;
   const rows: ApiBlog[] = Array.isArray(payload)
     ? payload
     : isApiListResp(payload)
-      ? ((totalItems.value = payload.totalItems),
-        (totalPages.value = payload.totalPages),
-        payload.rows)
-      : isApiAltResp(payload)
-        ? payload.data
-        : [];
+    ? ((totalItems.value = payload.totalItems),
+      (totalPages.value = payload.totalPages),
+      payload.rows)
+    : isApiAltResp(payload)
+    ? payload.data
+    : [];
 
   blogs.value = rows.map(mapApiBlog);
   emit("detail-title", "");
@@ -314,22 +320,93 @@ function goView(id: number) {
   router.push({ name: "blogs_id", params: { id } });
 }
 
+//  Helpers สำหรับ multiple select
+const isSelected = (id: number) => selectedIds.value.includes(id);
+
+function toggleSelect(id: number, checked: boolean) {
+  const set = new Set(selectedIds.value);
+  checked ? set.add(id) : set.delete(id);
+  selectedIds.value = [...set];
+}
+
+const someSelected = computed(() => selectedIds.value.length > 0);
+
+const allSelected = computed(
+  () =>
+    pagedBlogs.value.length > 0 &&
+    pagedBlogs.value.every((b) => selectedIds.value.includes(b.id))
+);
+
+function toggleSelectAll(checked: boolean) {
+  const pageIds = pagedBlogs.value.map((b) => b.id);
+  const set = new Set(selectedIds.value);
+  if (checked) pageIds.forEach((id) => set.add(id));
+  else pageIds.forEach((id) => set.delete(id));
+  selectedIds.value = [...set];
+}
+
 /* ---------- ลบ: modal + API ---------- */
 function askDelete(targetId: number, title: string) {
   deleteId.value = targetId;
   deleteTitle.value = title;
   deleteError.value = null;
+  // โหมดลบเดี่ยว
+  bulkMode.value = false;
+  confirmOpen.value = true;
+}
+
+// เปิด modal ลบหลายรายการ
+function askBulkDelete() {
+  if (!selectedIds.value.length) return;
+  deleteId.value = null;
+  deleteTitle.value = "";
+  deleteError.value = null;
+  bulkMode.value = true;
   confirmOpen.value = true;
 }
 
 async function confirmDelete() {
-  if (deleteId.value == null) return;
+  // CHANGE 6: รองรับทั้งโหมดเดี่ยวและหลายรายการ
   try {
     deleting.value = true;
-    await Axios.delete(`${API_BASE}${BLOGS_INDEX}/${deleteId.value}`, {
-      headers: AUTH_HEADER,
-    });
-    blogs.value = blogs.value.filter((b) => b.id !== deleteId.value);
+
+    if (bulkMode.value) {
+      const ids = [...selectedIds.value];
+      if (!ids.length) return;
+
+      // พยายามเรียก /blogs/delete ก่อน
+      try {
+        await Axios.post(
+          `${API_BASE}${BLOGS_INDEX}/delete`,
+          { ids },
+          { headers: { ...AUTH_HEADER, "Content-Type": "application/json" } }
+        );
+      } catch {
+        // ถ้า endpoint นี้ไม่พร้อม → fallback ลบรายตัว
+        await Promise.allSettled(
+          ids.map((id) =>
+            Axios.delete(`${API_BASE}${BLOGS_INDEX}/${id}`, {
+              headers: AUTH_HEADER,
+            })
+          )
+        );
+      }
+
+      // ตัดออกจาก list และล้าง selection
+      blogs.value = blogs.value.filter((b) => !ids.includes(b.id));
+      selectedIds.value = [];
+    } else {
+      if (deleteId.value == null) return;
+      await Axios.delete(`${API_BASE}${BLOGS_INDEX}/${deleteId.value}`, {
+        headers: AUTH_HEADER,
+      });
+      blogs.value = blogs.value.filter((b) => b.id !== deleteId.value);
+      // เผื่อมีเลือกไว้ ให้เอา id นี้ออกจาก selection
+      selectedIds.value = selectedIds.value.filter(
+        (id) => id !== deleteId.value
+      );
+    }
+
     confirmOpen.value = false;
   } catch (e: any) {
     deleteError.value =
@@ -357,6 +434,18 @@ async function confirmDelete() {
         </BlogsHeader>
 
         <BlogsSearch v-model="search" />
+        <!-- แถบแสดงจำนวนที่เลือก + ปุ่ม 'ลบที่เลือก' -->
+        <div v-if="someSelected" class="mb-2 flex items-center gap-3">
+          <span class="text-sm text-gray-600"
+            >เลือกแล้ว {{ selectedIds.length }} รายการ</span
+          >
+          <button
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700"
+            @click="askBulkDelete"
+          >
+            <TrashIcon class="w-4 h-4" /> ลบที่เลือก
+          </button>
+        </div>
 
         <div v-if="loading" class="p-6 text-center text-gray-500">
           กำลังโหลด...
@@ -371,15 +460,34 @@ async function confirmDelete() {
             <table class="w-full border-collapse table-auto">
               <thead>
                 <tr class="bg-gray-100 text-left text-sm text-gray-600">
-                  <th class="p-2 w-12"><input type="checkbox" /></th>
+                  <th class="p-2 w-12">
+                    <!-- header checkbox คุมทั้งหน้า -->
+                    <input
+                      type="checkbox"
+                      :checked="allSelected"
+                      @change="
+                        toggleSelectAll(
+                          ($event.target as HTMLInputElement).checked
+                        )
+                      "
+                    />
+                  </th>
                   <th class="p-2">หัวข้อ</th>
                   <th class="p-2 text-right"></th>
                 </tr>
               </thead>
               <tbody>
                 <template v-for="blog in pagedBlogs" :key="blog.id">
-                  <BlogsItem :blog="blog" @update:active="(v) => setActive(blog, v)" @view="goView(blog.id)"
-                    @edit="goEdit(blog.id)" @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
+                  <BlogsItem
+                    :blog="blog"
+                    :selected="isSelected(blog.id)"
+                    @toggle-select="(checked:boolean)=>toggleSelect(blog.id, checked)"
+                    @update:active="(v) => setActive(blog, v)"
+                    @view="goView(blog.id)"
+                    @edit="goEdit(blog.id)"
+                    @delete="askDelete(blog.id, blog.title)"
+                    @pin="togglePin(blog)"
+                  />
                 </template>
               </tbody>
             </table>
@@ -387,24 +495,39 @@ async function confirmDelete() {
 
           <!-- Mobile -->
           <div class="md:hidden space-y-4">
-            <BlogsCard v-for="blog in pagedBlogs" :key="blog.id" :blog="blog" @update:active="(v) => setActive(blog, v)"
-              @view="goView(blog.id)" @edit="goEdit(blog.id)" @delete="askDelete(blog.id, blog.title)"
-              @pin="togglePin(blog)" />
+            <BlogsCard
+              v-for="blog in pagedBlogs"
+              :key="blog.id"
+              :blog="blog"
+              :selected="isSelected(blog.id)"
+              @toggle-select="(checked:boolean)=>toggleSelect(blog.id, checked)"
+              @update:active="(v) => setActive(blog, v)"
+              @view="goView(blog.id)"
+              @edit="goEdit(blog.id)"
+              @delete="askDelete(blog.id, blog.title)"
+              @pin="togglePin(blog)"
+            />
           </div>
         </div>
 
         <BlogsFooter :total="totalItems" v-model:pageSize="pageSize" />
         <!-- ✅ ปุ่มเพจจิ้งให้วาง 'ใต้' BlogsFooter และอยู่ 'ด้านใน' บล็อก v-if นี้ -->
         <div class="mt-4 flex items-center justify-end gap-2">
-          <button class="px-3 py-1 rounded border disabled:opacity-50 hover:bg-sky-200"
-            :disabled="currentPage <= 1 || loading" @click="currentPage--">
+          <button
+            class="px-3 py-1 rounded border disabled:opacity-50 hover:bg-sky-200"
+            :disabled="currentPage <= 1 || loading"
+            @click="currentPage--"
+          >
             ก่อนหน้า
           </button>
 
           <span class="text-sm">หน้า {{ currentPage }} / {{ totalPages }}</span>
 
-          <button class="px-3 py-1 rounded border disabled:opacity-50" :disabled="currentPage >= totalPages || loading"
-            @click="currentPage++">
+          <button
+            class="px-3 py-1 rounded border disabled:opacity-50"
+            :disabled="currentPage >= totalPages || loading"
+            @click="currentPage++"
+          >
             ถัดไป
           </button>
         </div>
@@ -413,10 +536,16 @@ async function confirmDelete() {
 
     <!-- โหมดรายละเอียด: /blogs/:id -->
     <template v-else>
-      <div v-if="loading" class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">
+      <div
+        v-if="loading"
+        class="p-6 text-center text-gray-500 bg-white rounded-lg shadow"
+      >
         กำลังโหลด...
       </div>
-      <div v-else-if="error" class="p-6 text-center text-red-600 bg-white rounded-lg shadow">
+      <div
+        v-else-if="error"
+        class="p-6 text-center text-red-600 bg-white rounded-lg shadow"
+      >
         {{ error }}
       </div>
 
@@ -424,38 +553,69 @@ async function confirmDelete() {
         <BlogsDetail :blog="blogs[0]" />
       </div>
 
-      <div v-else class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">
+      <div
+        v-else
+        class="p-6 text-center text-gray-500 bg-white rounded-lg shadow"
+      >
         ไม่พบบทความนี้
       </div>
     </template>
 
     <!--  Confirm Delete Modal  -->
-    <div v-if="confirmOpen" class="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+    <div
+      v-if="confirmOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+    >
       <!-- backdrop -->
       <div class="absolute inset-0 bg-black/40"></div>
 
       <!-- dialog -->
       <div class="relative bg-white w-[92%] max-w-md rounded-2xl shadow-xl p-6">
-        <div class="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
+        <div
+          class="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3"
+        >
           <TrashIcon class="w-6 h-6 text-red-600" />
         </div>
-        <h3 class="text-lg font-semibold text-center">ลบข้อมูล</h3>
-        <p class="text-center text-sm text-gray-600 mt-1">
-          ยืนยันการลบบทความ
-          <span class="font-medium inline-block max-w-full break-all">“{{ deleteTitle }}”</span>
-          หรือไม่
-        </p>
+        <!-- เปลี่ยนข้อความตามโหมด  -->
+        <template v-if="bulkMode">
+          <h3 class="text-lg font-semibold text-center">
+            ลบข้อมูล (หลายรายการ)
+          </h3>
+          <p class="text-center text-sm text-gray-600 mt-1">
+            ยืนยันการลบ <b>{{ selectedIds.length }}</b> รายการหรือไม่
+          </p>
+        </template>
+        <template v-else>
+          <h3 class="text-lg font-semibold text-center">ลบข้อมูล</h3>
+          <p class="text-center text-sm text-gray-600 mt-1">
+            ยืนยันการลบบทความ
+            <span class="font-medium inline-block max-w-full break-all"
+              >“{{ deleteTitle }}”</span
+            >
+            หรือไม่
+          </p>
+        </template>
         <p v-if="deleteError" class="text-center text-sm text-red-600 mt-2">
           {{ deleteError }}
         </p>
 
         <div class="mt-5 grid grid-cols-2 gap-3">
-          <button type="button" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
-            @click="confirmOpen = false" :disabled="deleting">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+            @click="confirmOpen = false"
+            :disabled="deleting"
+          >
             ยกเลิก
           </button>
-          <button type="button" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
-            @click="confirmDelete" :disabled="deleting">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+            @click="confirmDelete"
+            :disabled="deleting"
+          >
             {{ deleting ? "กำลังลบ..." : "ลบ" }}
           </button>
         </div>
