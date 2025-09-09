@@ -2,32 +2,36 @@ import { createRouter, createWebHistory } from "vue-router";
 
 const BlogsView = () => import("@/views/BlogsView.vue");
 const BlogsCreateView = () => import("@/views/BlogsCreateView.vue");
-const BlogsUpdateView = () => import("@/views/BlogsUpdateView.vue"); // << add
+const BlogsUpdateView = () => import("@/views/BlogsUpdateView.vue"); 
+const LoginView = () => import("@/views/LoginView.vue"); 
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: "/", redirect: "/blogs" },
 
-    // list
-    { path: "/blogs", name: "blogs", component: BlogsView },
+    // login (ไม่ต้อง requiresAuth)
+    { path: "/login", name: "login", component: LoginView},
 
-    // create (วางก่อน :id)
-    { path: "/blogs/create", name: "blogs-create", component: BlogsCreateView },
+    // ใส่ meta.requiresAuth ให้ทุกหน้าบล็อก 
+    { path: "/blogs", name: "blogs", component: BlogsView, meta: { requiresAuth: true } },
+    { path: "/blogs/create", name: "blogs-create", component: BlogsCreateView, meta: { requiresAuth: true } },
+    { path: "/blogs/:id/update", name: "blogs-update", component: BlogsUpdateView, meta: { requiresAuth: true } },
+    { path: "/blogs/:id(\\d+)", name: "blogs_id", component: BlogsView, meta: { requiresAuth: true } },
 
-    // วางก่อน /blogs/:id เสมอ
-    {
-      path: "/blogs/:id/update",
-      name: "blogs-update",
-      component: BlogsUpdateView,
-    },
-
-    // by id (บังคับเลขเท่านั้น กันชนกับ 'create')
-    { path: "/blogs/:id(\\d+)", name: "blogs_id", component: BlogsView },
-
-    // จับ ทุก URL ที่ไม่ตรงกับเส้นทางอื่น แล้ว เปลี่ยนเส้นทาง (redirect) ไปที่ /blogs
     { path: "/:pathMatch(.*)*", redirect: "/blogs" },
   ],
 });
+
+// guard
+router.beforeEach((to) => {
+  const token = localStorage.getItem('token')
+  if (to.meta.requiresAuth && !token) {
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+  if (to.path === '/login' && token) {
+    return { path: '/blogs' }
+  }
+})
 
 export default router;

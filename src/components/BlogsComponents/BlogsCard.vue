@@ -29,6 +29,8 @@ const fallback = "https://placehold.co/64x64?text=No+Img";
 const onImgErr = (e: Event) => {
   (e.target as HTMLImageElement).src = fallback;
 };
+
+
 </script>
 
 <template>
@@ -45,6 +47,7 @@ const onImgErr = (e: Event) => {
             ? 'ต้องซ่อนก่อนถึงจะเลือกเพื่อลบได้'
             : 'เลือกเพื่อลบ'
         "
+        @click.stop
         @change="
           emit('toggle-select', ($event.target as HTMLInputElement).checked)
         "
@@ -54,11 +57,15 @@ const onImgErr = (e: Event) => {
       <img
         :src="props.blog.thumbnail || fallback"
         alt="thumb"
-        class="w-16 h-16 rounded object-cover"
+        class="w-16 h-16 rounded object-cover cursor-pointer"
         @error="onImgErr"
+        @click="emit('view')"
       />
       <div class="flex-1 min-w-0">
-        <p class="font-bold text-gray-700 truncate">{{ props.blog.title }}</p>
+        <!-- ชื่อ: คลิกเพื่อดูรายละเอียด -->
+        <p class="font-bold text-gray-700 truncate cursor-pointer" @click="emit('view')">
+          {{ props.blog.title }}
+        </p>
         <p class="text-sm text-gray-500">📆 {{ props.blog.date }}</p>
       </div>
     </div>

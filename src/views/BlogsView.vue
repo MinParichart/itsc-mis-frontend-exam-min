@@ -19,6 +19,7 @@ watch(
     if (!route.params.id) detailTitle.value = "";
   }
 );
+
 </script>
 
 <template>
