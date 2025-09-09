@@ -29,31 +29,23 @@ const fallback = "https://placehold.co/64x64?text=No+Img";
 const onImgErr = (e: Event) => {
   (e.target as HTMLImageElement).src = fallback;
 };
-
-
 </script>
 
 <template>
   <div class="border rounded-lg p-3 bg-white shadow-sm">
     <div class="flex items-start gap-3">
-      <!-- CHANGE 13: disable เมื่อเผยแพร่ -->
+      <!-- checkbox -->
       <input
         type="checkbox"
         class="mt-2"
         :checked="!props.blog.active && props.selected"
         :disabled="props.blog.active"
-        :title="
-          props.blog.active
-            ? 'ต้องซ่อนก่อนถึงจะเลือกเพื่อลบได้'
-            : 'เลือกเพื่อลบ'
-        "
+        :title="props.blog.active ? 'ต้องซ่อนก่อนถึงจะเลือกเพื่อลบได้' : 'เลือกเพื่อลบ'"
         @click.stop
-        @change="
-          emit('toggle-select', ($event.target as HTMLInputElement).checked)
-        "
+        @change="emit('toggle-select', ($event.target as HTMLInputElement).checked)"
       />
-      <!-- /CHANGE 13 -->
 
+      <!-- รูป: คลิกแล้ว emit('view') -->
       <img
         :src="props.blog.thumbnail || fallback"
         alt="thumb"
@@ -61,9 +53,13 @@ const onImgErr = (e: Event) => {
         @error="onImgErr"
         @click="emit('view')"
       />
+
       <div class="flex-1 min-w-0">
-        <!-- ชื่อ: คลิกเพื่อดูรายละเอียด -->
-        <p class="font-bold text-gray-700 truncate cursor-pointer" @click="emit('view')">
+        <!-- ชื่อ: คลิกแล้ว emit('view') -->
+        <p
+          class="font-bold text-gray-700 truncate cursor-pointer"
+          @click="emit('view')"
+        >
           {{ props.blog.title }}
         </p>
         <p class="text-sm text-gray-500">📆 {{ props.blog.date }}</p>

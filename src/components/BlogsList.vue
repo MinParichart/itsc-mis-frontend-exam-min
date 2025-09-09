@@ -24,7 +24,7 @@ interface Blogs {
   createdMs: number;
 }
 
-/*  API types  */
+/*  API types */
 type ApiImage = { url?: string };
 interface ApiBlog {
   id: number | string;
@@ -62,7 +62,7 @@ const blogs = ref<Blogs[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
-/*  State ของการลบ   */
+/* delete state */
 const confirmOpen = ref(false);
 const deleteId = ref<number | null>(null);
 const deleteTitle = ref("");
@@ -89,7 +89,7 @@ const AUTH_HEADER: Record<string, string> = {
 };
 const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
 
-/*  Helpers  */
+/* helpers */
 function toThaiDate(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -103,7 +103,6 @@ function toThaiDate(iso?: string): string {
     hour12: false,
   })} น.`;
 }
-
 function fixImgUrl(u?: string): string | undefined {
   if (!u) return undefined;
   const clean = u.replace(/\\/g, "/").replace(/^\/+/, "/");
@@ -111,7 +110,6 @@ function fixImgUrl(u?: string): string | undefined {
   const origin = API_ORIGIN.replace(/\/+$/, "");
   return `${origin}${clean.startsWith("/") ? "" : "/"}${clean}`;
 }
-
 function mapApiBlog(b: ApiBlog): Blogs {
   return {
     id: Number(b.id),
@@ -124,7 +122,6 @@ function mapApiBlog(b: ApiBlog): Blogs {
     createdMs: b.createdAt ? new Date(b.createdAt).getTime() : 0,
   };
 }
-
 function isApiListResp(x: unknown): x is ApiListResp {
   return !!x && typeof x === "object" && "rows" in x;
 }
@@ -132,7 +129,7 @@ function isApiAltResp(x: unknown): x is ApiAltResp {
   return !!x && typeof x === "object" && "data" in x;
 }
 
-/*  อ่าน id จาก URL ถ้ามี   */
+/* route param → id */
 const idParam = computed<number | null>(() => {
   const v = route.params.id;
   if (v == null) return null;
@@ -140,10 +137,10 @@ const idParam = computed<number | null>(() => {
   return Number.isFinite(n) ? n : null;
 });
 
-/* breadcrumb (ถ้าต้องใช้) */
+/* emit breadcrumb title */
 const emit = defineEmits<{ "detail-title": [string] }>();
 
-/* เรียก list (/blogs) + pagination */
+/* list fetch */
 async function fetchList(): Promise<void> {
   const res = await Axios.get<ApiListResp | ApiAltResp | ApiBlog[]>(
     `${API_BASE}${BLOGS_INDEX}`,
@@ -162,26 +159,25 @@ async function fetchList(): Promise<void> {
   const rows: ApiBlog[] = Array.isArray(payload)
     ? payload
     : isApiListResp(payload)
-      ? ((totalItems.value = payload.totalItems),
-        (totalPages.value = payload.totalPages),
-        payload.rows)
-      : isApiAltResp(payload)
-        ? payload.data
-        : [];
+    ? ((totalItems.value = payload.totalItems),
+      (totalPages.value = payload.totalPages),
+      payload.rows)
+    : isApiAltResp(payload)
+    ? payload.data
+    : [];
 
   blogs.value = rows.map(mapApiBlog);
   emit("detail-title", "");
 
-  /* CHANGE 1: เคลียร์ selection ที่อยู่นอกผลลัพธ์ หรือรายการที่ “เผยแพร่” */
+  // เคลียร์ selection ที่อยู่นอกผลลัพธ์ หรือเผยแพร่
   const idSet = new Set(blogs.value.map((b) => b.id));
   selectedIds.value = selectedIds.value.filter((id) => {
     const b = blogs.value.find((x) => x.id === id);
     return idSet.has(id) && b && !b.active;
   });
-  /* /CHANGE 1 */
 }
 
-/* watchers เพื่อรีเฟรช */
+/* watchers */
 watch(currentPage, refresh);
 watch([pageSize, search], () => {
   currentPage.value = 1;
@@ -193,7 +189,7 @@ watch(showAll, () => {
   refresh();
 });
 
-/* เรียก by id (/blogs/:id) */
+/* fetch by id */
 async function fetchById(id: number): Promise<void> {
   const { data } = await Axios.get<ApiBlog>(`${API_BASE}${BLOGS_INDEX}/${id}`, {
     headers: AUTH_HEADER,
@@ -202,7 +198,7 @@ async function fetchById(id: number): Promise<void> {
   emit("detail-title", blogs.value[0]?.title || "");
 }
 
-/* เลือกว่าจะดึงแบบไหน */
+/* refresh switcher */
 async function refresh(): Promise<void> {
   loading.value = true;
   error.value = null;
@@ -221,7 +217,7 @@ async function refresh(): Promise<void> {
   }
 }
 
-/*  Lifecycle  */
+/* lifecycle */
 onMounted(refresh);
 
 /* client filters */
@@ -238,25 +234,18 @@ const pagedBlogs = computed<Blogs[]>(() =>
   idParam.value !== null ? blogs.value : visibleBlogs.value
 );
 
-/* ---------- Multiple select constraints ---------- */
-/* CHANGE 2: id ที่ “เลือกได้” บนหน้าปัจจุบัน = เฉพาะที่ซ่อนอยู่ */
+/* multiple-select helpers */
 const eligibleIdsOnPage = computed<number[]>(() =>
   pagedBlogs.value.filter((b) => !b.active).map((b) => b.id)
 );
-/* /CHANGE 2 */
-
-/* CHANGE 3: isSelected ไม่ต้องเปลี่ยน แต่ toggleSelect จะกันเลือก item ที่เผยแพร่ */
 const isSelected = (id: number) => selectedIds.value.includes(id);
 function toggleSelect(id: number, checked: boolean) {
   const target = blogs.value.find((b) => b.id === id);
-  if (!target || target.active) return; // กันติ๊กถ้าเผยแพร่
+  if (!target || target.active) return;
   const set = new Set(selectedIds.value);
   checked ? set.add(id) : set.delete(id);
   selectedIds.value = [...set];
 }
-/* /CHANGE 3 */
-
-/* CHANGE 4: สถานะ some/all อิงจาก “eligibleIdsOnPage” เท่านั้น */
 const someSelected = computed(() =>
   selectedIds.value.some((id) => eligibleIdsOnPage.value.includes(id))
 );
@@ -271,9 +260,8 @@ function toggleSelectAll(checked: boolean) {
   else eligibleIdsOnPage.value.forEach((id) => set.delete(id));
   selectedIds.value = [...set];
 }
-/* /CHANGE 4 */
 
-/* ---------- Pin ---------- */
+/* pin toggle */
 async function togglePin(blog: Blogs) {
   const next = !blog.pin;
   const prev = blog.pin;
@@ -291,66 +279,61 @@ async function togglePin(blog: Blogs) {
     await Axios.put(`${API_BASE}${BLOGS_INDEX}/${blog.id}`, fd, {
       headers: { ...AUTH_HEADER, "Content-Type": "multipart/form-data" },
     });
-  } catch (err) {
+  } catch {
     blog.pin = prev;
     blogs.value = [...blogs.value];
   }
 }
 
-// ⭐ CHANGED: เรียก refetch เพื่อเติมรายการให้ครบหลังเปลี่ยนสถานะ
+/* active toggle */
 async function updateActive(target: Blogs, next: boolean) {
-  const prev = target.active
-  // optimistic UI
-  target.active = next
-  blogs.value = [...blogs.value]
+  const prev = target.active;
+  target.active = next;
+  blogs.value = [...blogs.value];
 
   try {
-    const { data } = await Axios.get<ApiBlog>(`${API_BASE}${BLOGS_INDEX}/${target.id}`, {
-      headers: AUTH_HEADER
-    })
+    const { data } = await Axios.get<ApiBlog>(
+      `${API_BASE}${BLOGS_INDEX}/${target.id}`,
+      { headers: AUTH_HEADER }
+    );
 
-    // พยายามส่ง JSON ก่อน
     try {
       await Axios.put(
         `${API_BASE}${BLOGS_INDEX}/${target.id}`,
-        { title: data.title ?? '', content: data.content ?? '', active: next },
+        { title: data.title ?? "", content: data.content ?? "", active: next },
         { headers: AUTH_HEADER }
-      )
+      );
     } catch {
-      // fallback เป็น multipart
-      const fd = new FormData()
-      fd.append('title', data.title ?? '')
-      fd.append('content', data.content ?? '')
-      fd.append('active', String(next))
+      const fd = new FormData();
+      fd.append("title", data.title ?? "");
+      fd.append("content", data.content ?? "");
+      fd.append("active", String(next));
       await Axios.put(`${API_BASE}${BLOGS_INDEX}/${target.id}`, fd, {
-        headers: { ...AUTH_HEADER, 'Content-Type': 'multipart/form-data' },
-      })
+        headers: { ...AUTH_HEADER, "Content-Type": "multipart/form-data" },
+      });
     }
 
-    // ⭐ ADDED: ดึงข้อมูลหน้าเดิมใหม่เพื่อเติม item ให้ครบ
-    await refreshAndFillPage()
-
+    await refreshAndFillPage();
   } catch (err) {
-    // rollback
-    target.active = prev
-    blogs.value = [...blogs.value]
-    console.error('update active failed:', err)
+    target.active = prev;
+    blogs.value = [...blogs.value];
+    console.error("update active failed:", err);
   } finally {
     if (target.active) {
-      selectedIds.value = selectedIds.value.filter(id => id !== target.id)
+      selectedIds.value = selectedIds.value.filter((id) => id !== target.id);
     }
   }
 }
 
-/* ไปหน้าอื่น */
+/* navigation */
 function goEdit(id: number) {
-  router.push({ name: "blogs-update", params: { id } });
+  router.push({ name: "blogs-update", params: { id: String(id) } }); // FIX
 }
 function goView(id: number) {
-  router.push({ name: "blogs_id", params: { id } });
+  router.push({ name: "blogs_id", params: { id: String(id) } });     // FIX
 }
 
-/* ---------- ลบ ---------- */
+/* delete */
 function askDelete(targetId: number, title: string) {
   deleteId.value = targetId;
   deleteTitle.value = title;
@@ -370,7 +353,6 @@ async function confirmDelete() {
   try {
     deleting.value = true;
     if (bulkMode.value) {
-      /* CHANGE 6: ลบเฉพาะ id ที่ “ซ่อนอยู่” เท่านั้น */
       const ids = selectedIds.value.filter((id) => {
         const b = blogs.value.find((x) => x.id === id);
         return b && !b.active;
@@ -387,7 +369,6 @@ async function confirmDelete() {
           { headers: { ...AUTH_HEADER, "Content-Type": "application/json" } }
         );
       } catch {
-        // fallback
         await Promise.allSettled(
           ids.map((id) =>
             Axios.delete(`${API_BASE}${BLOGS_INDEX}/${id}`, {
@@ -398,7 +379,6 @@ async function confirmDelete() {
       }
       blogs.value = blogs.value.filter((b) => !ids.includes(b.id));
       selectedIds.value = selectedIds.value.filter((id) => !ids.includes(id));
-      // ⭐ ADDED
       await refreshAndFillPage();
     } else {
       if (deleteId.value == null) return;
@@ -406,11 +386,8 @@ async function confirmDelete() {
         headers: AUTH_HEADER,
       });
       blogs.value = blogs.value.filter((b) => b.id !== deleteId.value);
-      // ⭐ ADDED
       await refreshAndFillPage();
-      selectedIds.value = selectedIds.value.filter(
-        (id) => id !== deleteId.value
-      );
+      selectedIds.value = selectedIds.value.filter((id) => id !== deleteId.value);
     }
     confirmOpen.value = false;
   } catch (e: any) {
@@ -424,22 +401,18 @@ async function confirmDelete() {
   }
 }
 
-// ⭐ ADDED: refetch เพื่อให้หน้านี้ถูกเติมให้ครบหลังซ่อน/ลบ
+/* fill page after mutate */
 async function refreshAndFillPage() {
-  // ดึงหน้าเดิมก่อน
-  await fetchList()
+  await fetchList();
 
-  // ถ้า currentPage เกินจำนวนหน้าจริง ให้ย้ายกลับไปหน้าสุดท้ายแล้วดึงใหม่
   if (currentPage.value > totalPages.value && totalPages.value > 0) {
-    currentPage.value = totalPages.value
-    await fetchList()
-    return
+    currentPage.value = totalPages.value;
+    await fetchList();
+    return;
   }
-
-  // ถ้าหน้านี้ว่างแต่ยังมีหน้าก่อนหน้า → ถอยหนึ่งหน้าแล้วดึงใหม่
   if (blogs.value.length === 0 && currentPage.value > 1) {
-    currentPage.value--
-    await fetchList()
+    currentPage.value--;
+    await fetchList();
   }
 }
 </script>
@@ -457,25 +430,21 @@ async function refreshAndFillPage() {
 
         <BlogsSearch v-model="search" />
 
-        <!-- แสดงปุ่มลบเฉพาะเมื่อมีเลือก “ที่ซ่อนอยู่” -->
+        <!-- ปุ่มลบหลายรายการ -->
         <div v-if="someSelected" class="mb-2 flex items-center gap-3">
-          <span class="text-sm text-gray-600">เลือกแล้ว
-            {{
-              selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length
-            }}
-            รายการ</span>
-          <button class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700"
-            @click="askBulkDelete">
+          <span class="text-sm text-gray-600">
+            เลือกแล้ว {{ selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length }} รายการ
+          </span>
+          <button
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700"
+            @click="askBulkDelete"
+          >
             <TrashIcon class="w-4 h-4" /> ลบที่เลือก
           </button>
         </div>
 
-        <div v-if="loading" class="p-6 text-center text-gray-500">
-          กำลังโหลด...
-        </div>
-        <div v-else-if="error" class="p-6 text-center text-red-600">
-          {{ error }}
-        </div>
+        <div v-if="loading" class="p-6 text-center text-gray-500">กำลังโหลด...</div>
+        <div v-else-if="error" class="p-6 text-center text-red-600">{{ error }}</div>
 
         <div v-else class="overflow-x-auto">
           <!-- Desktop -->
@@ -484,50 +453,67 @@ async function refreshAndFillPage() {
               <thead>
                 <tr class="bg-gray-100 text-left text-sm text-gray-600">
                   <th class="p-2 w-12">
-                    <!-- CHANGE 7: header checkbox เลือกเฉพาะที่ “ซ่อนอยู่” และปิดได้ถ้าไม่มีให้เลือก -->
-                    <input type="checkbox" :checked="allSelected" :disabled="eligibleIdsOnPage.length === 0" @change="
-                      toggleSelectAll(
-                        ($event.target as HTMLInputElement).checked
-                      )
-                      " />
-                    <!-- /CHANGE 7 -->
+                    <input
+                      type="checkbox"
+                      :checked="allSelected"
+                      :disabled="eligibleIdsOnPage.length === 0"
+                      @change="toggleSelectAll(($event.target as HTMLInputElement).checked)"
+                    />
                   </th>
                   <th class="p-2">หัวข้อ</th>
                   <th class="p-2 text-right"></th>
                 </tr>
               </thead>
               <tbody>
-                <template v-for="blog in pagedBlogs" :key="blog.id">
-                  <BlogsItem :blog="blog" :selected="isSelected(blog.id)"
-                    @toggle-select="(checked: boolean) => toggleSelect(blog.id, checked)"
-                    @update:active="(v) => updateActive(blog, v)" @view="goView(blog.id)" @edit="goEdit(blog.id)"
-                    @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" 
-                    @view="goView(blog.id)"
-                    />
-                    
-                </template>
+                <!-- ย้าย v-for มาที่คอมโพเนนต์โดยตรง และผูก @view ครั้งเดียว -->
+                <BlogsItem
+                  v-for="blog in pagedBlogs"
+                  :key="blog.id"
+                  :blog="blog"
+                  :selected="isSelected(blog.id)"
+                  @toggle-select="(checked: boolean) => toggleSelect(blog.id, checked)"
+                  @update:active="(v) => updateActive(blog, v)"
+                  @view="goView(blog.id)"
+                  @edit="goEdit(blog.id)"
+                  @delete="askDelete(blog.id, blog.title)"
+                  @pin="togglePin(blog)"
+                />
               </tbody>
             </table>
           </div>
 
           <!-- Mobile -->
           <div class="md:hidden space-y-4">
-            <BlogsCard v-for="blog in pagedBlogs" :key="blog.id" :blog="blog" :selected="isSelected(blog.id)"
+            <BlogsCard
+              v-for="blog in pagedBlogs"
+              :key="blog.id"
+              :blog="blog"
+              :selected="isSelected(blog.id)"
               @toggle-select="(checked: boolean) => toggleSelect(blog.id, checked)"
-              @update:active="(v) => updateActive(blog, v)" @view="goView(blog.id)" @edit="goEdit(blog.id)"
-              @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
+              @update:active="(v) => updateActive(blog, v)"
+              @view="goView(blog.id)"
+              @edit="goEdit(blog.id)"
+              @delete="askDelete(blog.id, blog.title)"
+              @pin="togglePin(blog)"
+            />
           </div>
         </div>
 
         <BlogsFooter :total="totalItems" v-model:pageSize="pageSize" />
         <div class="mt-4 flex items-center justify-end gap-2">
-          <button class="px-3 py-1 rounded border disabled:opacity-50 hover:bg-sky-200"
-            :disabled="currentPage <= 1 || loading" @click="currentPage--">
+          <button
+            class="px-3 py-1 rounded border disabled:opacity-50 hover:bg-sky-200"
+            :disabled="currentPage <= 1 || loading"
+            @click="currentPage--"
+          >
             ก่อนหน้า
           </button>
           <span class="text-sm">หน้า {{ currentPage }} / {{ totalPages }}</span>
-          <button class="px-3 py-1 rounded border disabled:opacity-50" :disabled="currentPage >= totalPages || loading"
-            @click="currentPage++">
+          <button
+            class="px-3 py-1 rounded border disabled:opacity-50"
+            :disabled="currentPage >= totalPages || loading"
+            @click="currentPage++"
+          >
             ถัดไป
           </button>
         </div>
@@ -536,18 +522,12 @@ async function refreshAndFillPage() {
 
     <!-- โหมดรายละเอียด -->
     <template v-else>
-      <div v-if="loading" class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">
-        กำลังโหลด...
-      </div>
-      <div v-else-if="error" class="p-6 text-center text-red-600 bg-white rounded-lg shadow">
-        {{ error }}
-      </div>
+      <div v-if="loading" class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">กำลังโหลด...</div>
+      <div v-else-if="error" class="p-6 text-center text-red-600 bg-white rounded-lg shadow">{{ error }}</div>
       <div v-else-if="blogs.length">
         <BlogsDetail :blog="blogs[0]" />
       </div>
-      <div v-else class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">
-        ไม่พบบทความนี้
-      </div>
+      <div v-else class="p-6 text-center text-gray-500 bg-white rounded-lg shadow">ไม่พบบทความนี้</div>
     </template>
 
     <!-- Confirm Delete Modal -->
@@ -559,15 +539,9 @@ async function refreshAndFillPage() {
         </div>
 
         <template v-if="bulkMode">
-          <h3 class="text-lg font-semibold text-center">
-            ลบข้อมูล (หลายรายการ)
-          </h3>
+          <h3 class="text-lg font-semibold text-center">ลบข้อมูล (หลายรายการ)</h3>
           <p class="text-center text-sm text-gray-600 mt-1">
-            ยืนยันการลบ
-            <b>{{
-              selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length
-            }}</b>
-            รายการหรือไม่
+            ยืนยันการลบ <b>{{ selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length }}</b> รายการหรือไม่
           </p>
         </template>
         <template v-else>
@@ -579,9 +553,7 @@ async function refreshAndFillPage() {
           </p>
         </template>
 
-        <p v-if="deleteError" class="text-center text-sm text-red-600 mt-2">
-          {{ deleteError }}
-        </p>
+        <p v-if="deleteError" class="text-center text-sm text-red-600 mt-2">{{ deleteError }}</p>
 
         <div class="mt-5 grid grid-cols-2 gap-3">
           <button type="button" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"

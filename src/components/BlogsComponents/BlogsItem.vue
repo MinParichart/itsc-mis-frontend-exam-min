@@ -14,7 +14,7 @@ interface Blogs {
 const props = defineProps<{ blog: Blogs; selected?: boolean }>();
 /* /CHANGE 8 */
 
-/* CHANGE 9: เพิ่มอีเวนต์ toggle-select */
+/* CHANGE 9: เพิ่มอีเวนต์ toggle-select + view */
 const emit = defineEmits<{
   "update:active": [boolean];
   view: [];
@@ -29,17 +29,33 @@ const emit = defineEmits<{
 <template>
   <tr class="border-b border-gray-200 hover:bg-gray-50 text-sm">
     <td class="p-2">
-      <input type="checkbox" :checked="!props.blog.active && props.selected" :disabled="props.blog.active"
-        :title="props.blog.active ? 'ต้องซ่อนก่อนถึงจะเลือกเพื่อลบได้' : 'เลือกเพื่อลบ'" @click.stop
-        @change="emit('toggle-select', ($event.target as HTMLInputElement).checked)" />
+      <!-- กัน bubble ไม่ให้กินคลิกอื่นในแถว -->
+      <input
+        type="checkbox"
+        :checked="!props.blog.active && props.selected"
+        :disabled="props.blog.active"
+        :title="props.blog.active ? 'ต้องซ่อนก่อนถึงจะเลือกเพื่อลบได้' : 'เลือกเพื่อลบ'"
+        @click.stop
+        @change="emit('toggle-select', ($event.target as HTMLInputElement).checked)"
+      />
     </td>
 
     <td class="p-2">
       <div class="flex items-start gap-3 min-w-[280px]">
-        <img v-if="props.blog.thumbnail" :src="props.blog.thumbnail" alt="thumb"
-          class="w-16 h-16 rounded object-cover cursor-pointer" @click="emit('view')" />
+        <!-- รูป: คลิกแล้ว emit('view') -->
+        <img
+          v-if="props.blog.thumbnail"
+          :src="props.blog.thumbnail"
+          alt="thumb"
+          class="w-16 h-16 rounded object-cover cursor-pointer"
+          @click="emit('view')"
+        />
         <div class="flex-1 min-w-0">
-          <p class="font-bold text-gray-700 truncate cursor-pointer" @click="emit('view')">
+          <!-- ชื่อ: คลิกแล้ว emit('view') -->
+          <p
+            class="font-bold text-gray-700 truncate cursor-pointer"
+            @click="emit('view')"
+          >
             {{ props.blog.title }}
           </p>
           <p class="text-sm text-gray-500">📆 {{ props.blog.date }}</p>
@@ -48,8 +64,15 @@ const emit = defineEmits<{
     </td>
 
     <td class="p-2">
-      <BlogsActions :active="props.blog.active" :pin="props.blog.pin" @update:active="(v) => emit('update:active', v)"
-        @view="emit('view')" @edit="emit('edit')" @delete="emit('delete')" @pin="emit('pin')" />
+      <BlogsActions
+        :active="props.blog.active"
+        :pin="props.blog.pin"
+        @update:active="(v) => emit('update:active', v)"
+        @view="emit('view')"
+        @edit="emit('edit')"
+        @delete="emit('delete')"
+        @pin="emit('pin')"
+      />
     </td>
   </tr>
 </template>
