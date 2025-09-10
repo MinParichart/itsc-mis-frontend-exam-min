@@ -1,9 +1,14 @@
 // main.ts
 import './style.css'
 
+// สร้างอินสแตนซ์แอปพลิเคชันใหม่
 import { createApp } from 'vue'
 import App from './App.vue'
+const app = createApp(App)
+
 import router from './router'
+
+app.use(router).mount('#app')
 
 // CHANGE 1: ใช้ Axios + type error
 import Axios, { AxiosError } from 'axios'
@@ -113,4 +118,4 @@ Axios.interceptors.response.use(
   }
 )
 
-createApp(App).use(router).mount('#app')
+

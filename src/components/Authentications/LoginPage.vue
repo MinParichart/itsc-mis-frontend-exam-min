@@ -13,7 +13,7 @@ const err = ref("");
 const loading = ref(false);
 
 const r = useRouter();
-const route = useRoute();
+const route = useRoute();a
 
 // CHANGE 2: ประกาศชนิดข้อมูลที่คาดหวังจาก API
 interface LoginResp {
