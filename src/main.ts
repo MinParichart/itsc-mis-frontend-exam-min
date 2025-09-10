@@ -6,7 +6,10 @@ import { createApp } from 'vue'
 import App from './App.vue'
 const app = createApp(App)
 
+// 👉 เพิ่มบรรทัดนี้ให้แน่ใจว่า axios ถูกตั้งค่าก่อน component ใดๆ ใช้
 import router from './router'
+
+import "@/plugins/axios"
 
 app.use(router).mount('#app')
 
