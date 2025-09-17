@@ -1,7 +1,6 @@
 // main.ts
 import './style.css'
 
-// สร้างอินสแตนซ์แอปพลิเคชันใหม่
 import { createApp } from 'vue'
 import App from './App.vue'
 const app = createApp(App)
@@ -28,11 +27,14 @@ Axios.defaults.baseURL =
   import.meta.env.VITE_API_BASE || 'https://exam-api.dev.mis.cmu.ac.th/api'
 Axios.defaults.headers.common['Accept'] = 'application/json'
 
-// CHANGE 4: request interceptor — แนบ Bearer token ถ้ามี
 Axios.interceptors.request.use((config) => {
-  const t = localStorage.getItem('token')
+  const t = localStorage.getItem("token")
   if (t) {
-    config.headers = { ...(config.headers || {}), Authorization: `Bearer ${t}` }
+    // ✅ แบบนี้ TS ไม่ฟ้อง
+    config.headers = {
+      ...(config.headers ?? {}), // ถ้า headers เป็น undefined ให้ใช้ {}
+      Authorization: `Bearer ${t}`,
+    }
   }
   return config
 })
