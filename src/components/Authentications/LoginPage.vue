@@ -12,7 +12,7 @@ const password = ref("");
 const err = ref("");
 const loading = ref(false);
 
-const r = useRouter();
+const router = useRouter();
 const route = useRoute();
 
 // CHANGE 2: ประกาศชนิดข้อมูลที่คาดหวังจาก API
@@ -40,7 +40,7 @@ async function login() {
       String(Date.now() + data.expires_in * 1000)
     ); // 5 นาที
 
-    r.push((route.query.redirect as string) || "/blogs");
+    router.push((route.query.redirect as string) || "/blogs");
   } catch (e: unknown) {
     const ax = e as AxiosError<any>;
     const status = ax.response?.status;
