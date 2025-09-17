@@ -1,67 +1,29 @@
-// src/models/blog.ts
-import dayjs from "@/plugins/dayjs";
-
-export type ApiImage = { url?: string };
+// src/models/api.ts
+export type ApiImage = { url?: string }
 
 export interface ApiBlog {
-  id: number | string;
-  title?: string;
-  content?: string;
-  hit?: number;
-  pin?: boolean;
-  active?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  img?: ApiImage;
-  Img?: ApiImage;
+  id: number | string
+  title?: string
+  content?: string
+  hit?: number
+  pin?: boolean
+  active?: boolean
+  createdAt?: string
+  updatedAt?: string
+  img?: ApiImage
+  Img?: ApiImage
 }
 
-export interface Blog {
-  id: number;
-  title: string;
-  date: string;        // แสดงผลพร้อมเวลา (ไทย)
-  thumbnail?: string;
-  active: boolean;
-  content: string;
-  pin: boolean;
-  createdMs: number;
+export interface ApiList<T> {
+  totalItems: number
+  rows: T[]
+  totalPages: number
+  currentPage: number
 }
 
-export interface ApiListResp {
-  totalItems: number;
-  rows: ApiBlog[];
-  totalPages: number;
-  currentPage: number;
-}
-export interface ApiAltResp {
-  data: ApiBlog[];
-}
-
-const API_ORIGIN = ((import.meta.env.VITE_API_BASE as string) || "https://exam-api.dev.mis.cmu.ac.th/api")
-  .replace(/\/api\/?$/, "");
-
-export function fixImgUrl(u?: string): string | undefined {
-  if (!u) return undefined;
-  const clean = u.replace(/\\/g, "/").replace(/^\/+/, "/");
-  if (/^https?:\/\//i.test(clean)) return clean;
-  const origin = API_ORIGIN.replace(/\/+$/, "");
-  return `${origin}${clean.startsWith("/") ? "" : "/"}${clean}`;
-}
-
-export function toThaiDate(iso?: string): string {
-  if (!iso) return "";
-  return dayjs(iso).format("DD MMM YYYY HH:mm") + " น.";
-}
-
-export function mapApiBlog(b: ApiBlog): Blog {
-  return {
-    id: Number(b.id),
-    title: String(b.title ?? ""),
-    date: toThaiDate(b.createdAt),
-    thumbnail: fixImgUrl(b.img?.url ?? b.Img?.url),
-    active: Boolean(b.active),
-    content: typeof b.content === "string" ? b.content : "",
-    pin: Boolean(b.pin),
-    createdMs: b.createdAt ? new Date(b.createdAt).getTime() : 0,
-  };
-}
+// REST endpoints
+export const API_BASE: string = (import.meta.env.VITE_API_BASE as string) || 'https://exam-api.dev.mis.cmu.ac.th/api'
+export const BLOGS_INDEX = '/blogs'
+export const BLOG_BY_ID = (id: number | string) => `/blogs/${id}`
+export const BLOG_REMOVE_IMAGE = (id: number | string) => `/blogs/${id}/remove-image`
+export const BLOG_DELETE_MANY = '/blogs/delete'

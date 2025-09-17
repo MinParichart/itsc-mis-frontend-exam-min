@@ -3,16 +3,19 @@ import BreadcrumbBar from "@/components/BlogsComponents/BreadcrumbBar.vue";
 import NavbarForAll from "@/components/BlogsComponents/NavbarForAll.vue";
 import BlogsList from "@/components/BlogsList.vue";
 
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute } from "vue-router";
 
 const route = useRoute();
 const detailTitle = ref("");
+const listRef = ref<InstanceType<typeof BlogsList> | null>(null)
 
 // มี id ไหม (โหมดรายละเอียด)
 const hasId = computed(() => !!route.params.id);
 
 // ถ้าเปลี่ยนเส้นทางกลับหน้า list ให้เคลียร์ชื่อ
+onMounted(()=>{ listRef.value?.refresh?.() })
+
 watch(
   () => route.params.id,
   () => {
@@ -46,5 +49,5 @@ watch(
   </NavbarForAll>
 
   <!-- BlogsList จะ emit ชื่อเรื่องขึ้นมาใช้ทำ breadcrumb -->
-  <BlogsList @detail-title="detailTitle = $event" />
+  <BlogsList ref="listRef" @detail-title="detailTitle = $event" />
 </template>

@@ -1,40 +1,26 @@
 <script setup lang="ts">
-import BlogsActions from "./BlogsActions.vue";
+import BlogsActions from './BlogsActions.vue'
+import type { Blog } from '@/models/blog'
 
-interface Blogs {
-  id: number;
-  title: string;
-  date: string;
-  thumbnail?: string;
-  active: boolean;
-  pin?: boolean;
-}
-
-/* CHANGE 11: รับ selected จากพาเรนต์ */
-const props = defineProps<{ blog: Blogs; selected?: boolean }>();
-/* /CHANGE 11 */
-
+const props = defineProps<{ blog: Blog; selected?: boolean }>()
 const emit = defineEmits<{
-  "update:active": [boolean];
-  view: [];
-  edit: [];
-  delete: [];
-  pin: [];
-  /* CHANGE 12: แจ้งพาเรนต์เมื่อติ๊ก/ยกเลิกติ๊ก */
-  "toggle-select": [boolean];
-}>();
-/* /CHANGE 12 */
+  'update:active': [boolean]
+  view: []
+  edit: []
+  delete: []
+  pin: []
+  'toggle-select': [boolean]
+}>()
 
-const fallback = "https://placehold.co/64x64?text=No+Img";
+const fallback = 'https://placehold.co/64x64?text=No+Img'
 const onImgErr = (e: Event) => {
-  (e.target as HTMLImageElement).src = fallback;
-};
+  (e.target as HTMLImageElement).src = fallback
+}
 </script>
 
 <template>
   <div class="border rounded-lg p-3 bg-white shadow-sm">
     <div class="flex items-start gap-3">
-      <!-- checkbox -->
       <input
         type="checkbox"
         class="mt-2"
@@ -45,7 +31,6 @@ const onImgErr = (e: Event) => {
         @change="emit('toggle-select', ($event.target as HTMLInputElement).checked)"
       />
 
-      <!-- รูป: คลิกแล้ว emit('view') -->
       <img
         :src="props.blog.thumbnail || fallback"
         alt="thumb"
@@ -55,11 +40,7 @@ const onImgErr = (e: Event) => {
       />
 
       <div class="flex-1 min-w-0">
-        <!-- ชื่อ: คลิกแล้ว emit('view') -->
-        <p
-          class="font-bold text-gray-700 truncate cursor-pointer"
-          @click="emit('view')"
-        >
+        <p class="font-bold text-gray-700 truncate cursor-pointer" @click="emit('view')">
           {{ props.blog.title }}
         </p>
         <p class="text-sm text-gray-500">📆 {{ props.blog.date }}</p>

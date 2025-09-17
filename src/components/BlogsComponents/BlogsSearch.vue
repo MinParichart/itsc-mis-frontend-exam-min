@@ -8,7 +8,7 @@ const model = defineModel<string>();
       v-model="model"
       type="text"
       placeholder="ค้นหาเรื่อง, เนื้อหา"
-      class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      class="w-full border border-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
     />
   </div>
 </template>

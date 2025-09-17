@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ApiBlog } from '@/models/api';
+import { mapApiBlog } from '@/models/blog';
 import { TrashIcon } from "@heroicons/vue/24/solid";
 import Axios from "axios";
 import { computed, onMounted, ref, watch } from "vue";
@@ -13,40 +15,8 @@ import BlogsSearch from "./BlogsComponents/BlogsSearch.vue";
 import BlogsToggle from "./BlogsComponents/BlogsToggle.vue";
 
 /*  UI model  */
-interface Blogs {
-  id: number;
-  title: string;
-  date: string;
-  thumbnail?: string;
-  active: boolean;
-  content?: string;
-  pin: boolean;
-  createdMs: number;
-}
-
 /*  API types */
-type ApiImage = { url?: string };
-interface ApiBlog {
-  id: number | string;
-  title?: string;
-  content?: string;
-  hit?: number;
-  pin?: boolean;
-  active?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  img?: ApiImage;
-  Img?: ApiImage;
-}
-interface ApiListResp {
-  totalItems: number;
-  rows: ApiBlog[];
-  totalPages: number;
-  currentPage: number;
-}
-interface ApiAltResp {
-  data: ApiBlog[];
-}
+
 interface ApiErrorPayload {
   message?: string;
   error?: string;
@@ -55,9 +25,9 @@ interface ApiErrorPayload {
 /*  State  */
 const router = useRouter();
 const route = useRoute();
-const showAll = ref(false);
-const search = ref("");
-const pageSize = ref(10);
+const showAll = ref<boolean>(true);
+const search = ref<string>("");
+const pageSize = ref<number>(Number(import.meta.env.VITE_PAGE_SIZE_DEFAULT ?? 10000));
 const blogs = ref<Blogs[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -146,12 +116,7 @@ async function fetchList(): Promise<void> {
     `${API_BASE}${BLOGS_INDEX}`,
     {
       headers: AUTH_HEADER,
-      params: {
-        page: currentPage.value,
-        size: pageSize.value,
-        q: search.value || undefined,
-        show: showAll.value ? "all" : "active",
-      },
+      params: { page: Math.max(1, currentPage.value), size: pageSize.value || 10000, q: (search.value?.trim() || undefined), show: showAll.value ? 'all' : 'active' },
     }
   );
 
@@ -327,13 +292,17 @@ async function updateActive(target: Blogs, next: boolean) {
 
 /* navigation */
 function goEdit(id: number) {
-  router.push({ name: "blogs-update", params: { id: String(id) } }); // FIX
+  router.push({ name: 'blogs-update', params: { id } })
 }
 function goView(id: number) {
-  router.push({ name: "blogs_id", params: { id: String(id) } });     // FIX
+  router.push({ name: 'blogs_id', params: { id } })
 }
 
 /* delete */
+function goCreate() {
+  router.push({ name: 'blogs-create' })
+}
+
 function askDelete(targetId: number, title: string) {
   deleteId.value = targetId;
   deleteTitle.value = title;
@@ -415,6 +384,9 @@ async function refreshAndFillPage() {
     await fetchList();
   }
 }
+
+
+defineExpose({ refresh })
 </script>
 
 <template>

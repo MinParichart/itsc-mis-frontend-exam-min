@@ -15,12 +15,7 @@ const AUTH_HEADER: Record<string, string> = {
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 };
 
-interface ApiErrorPayload {
-  message?: string;
-  error?: string;
-}
-
-type Form = { title: string; content: string; file: File | null };
+import type { ApiErrorPayload } from '@/models/common'type Form = { title: string; content: string; file: File | null };
 const form = reactive<Form>({ title: "", content: "", file: null });
 const touched = reactive({ title: false, content: false, file: false });
 const loading = ref(false);
@@ -117,7 +112,7 @@ async function onSubmit() {
       <!-- content -->
       <div>
         <label class="block mb-1 font-medium"
-          >เนื้อหา <span class="text-red-500">*</span></label
+          >เนื้อหา<span class="text-red-500">*</span></label
         >
         <textarea
           v-model="form.content"

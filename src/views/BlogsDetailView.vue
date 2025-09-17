@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import BlogsCreate from '@/components/BlogsComponents/BlogsUpdate.vue'
+import BlogsDetail from '@/components/BlogsComponents/BlogsDetail.vue'
 import BreadcrumbBar from '@/components/BlogsComponents/BreadcrumbBar.vue'
 import NavbarForAll from '@/components/BlogsComponents/NavbarForAll.vue'
 import type { Blog } from '@/models/blog'
@@ -16,8 +16,8 @@ const title = ref<string>('')
 
 onMounted(async () => {
   const data = await svc.fetchBlogById(id)
-  blog.value = mapApiBlog(data)
-  title.value = blog.value?.title ?? ''
+  blog.value = mapApiBlog(data)        // ✅ แปลง Api → UI (มี thumbnail แล้ว)
+  title.value = blog.value?.title || ''
 })
 </script>
 
@@ -33,10 +33,8 @@ onMounted(async () => {
   </NavbarForAll>
 
   <div class="container mx-auto max-w-5xl px-4 py-6">
-    <!-- ❌ เอา hero image ออก ไม่ให้ซ้ำ -->
-    <!-- <img v-if="blog?.thumbnail" ... /> -->
-
-    <!-- ✅ ให้แสดงรูปภายในคอมโพเนนต์นี้ที่เดียว -->
-    <BlogsCreate v-if="blog" :blog="blog" />
+    <!-- แสดงรูปให้ชัวร์ -->
+    <BlogsDetail v-if="blog" :blog="blog" />
   </div>
 </template>
+ห

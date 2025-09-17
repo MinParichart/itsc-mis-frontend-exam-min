@@ -1,14 +1,7 @@
 <script setup lang="ts">
 import { PencilSquareIcon } from "@heroicons/vue/24/solid";
 
-interface Blog {
-  id: number;
-  title: string;
-  date: string;
-  active: boolean;
-  thumbnail?: string;
-  content?: string;
-}
+import type { Blog } from '@/models/blog';
 const props = defineProps<{ blog: Blog }>();
 
 // กันรูปพัง/ไม่มีรูป
@@ -30,20 +23,14 @@ const onErr = (e: Event) => ((e.target as HTMLImageElement).src = fallback);
       <div class="flex items-center gap-4 shrink-0">
         <div class="text-sm text-gray-600">
           <span class="mr-1">สถานะ:</span>
-          <span
-            :class="
-              props.blog.active ? 'text-green-600 font-medium' : 'text-gray-400'
-            "
-          >
+          <span :class="props.blog.active ? 'text-green-600 font-medium' : 'text-gray-400'
+            ">
             {{ props.blog.active ? "เผยแพร่" : "ซ่อน" }}
           </span>
         </div>
 
-        <RouterLink
-          :to="{ name: 'blogs-update', params: { id: props.blog.id } }"
-          class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-amber-500 text-white hover:bg-amber-600"
-          title="แก้ไขบทความ"
-        >
+        <RouterLink :to="{ name: 'blogs-update', params: { id: String(props.blog.id) } }"
+          class="p-2 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200" title="แก้ไขบทความ">
           <PencilSquareIcon class="w-4 h-4" />
         </RouterLink>
       </div>
@@ -51,13 +38,8 @@ const onErr = (e: Event) => ((e.target as HTMLImageElement).src = fallback);
 
     <!-- Body -->
     <div class="px-6 py-6">
-      <img
-        v-if="props.blog.thumbnail"
-        :src="props.blog.thumbnail"
-        alt=""
-        class="mx-auto mb-6 max-h-72 object-contain rounded"
-        @error="onErr"
-      />
+      <img v-if="props.blog.thumbnail" :src="props.blog.thumbnail" alt=""
+        class="mx-auto mb-6 max-h-72 object-contain rounded" @error="onErr" />
       <hr class="border-t border-gray-200 my-4" />
       <p class="whitespace-pre-line leading-7 text-gray-700">
         {{ props.blog.content || "" }}

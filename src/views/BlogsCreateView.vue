@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import BlogsCreate from "@/components/BlogsComponents/BlogsCreate.vue";
+import BlogsCreate from '@/components/BlogsComponents/BlogsCreate.vue';
 import BreadcrumbBar from "@/components/BlogsComponents/BreadcrumbBar.vue";
 import NavbarForAll from "@/components/BlogsComponents/NavbarForAll.vue";
 </script>
@@ -20,6 +20,6 @@ import NavbarForAll from "@/components/BlogsComponents/NavbarForAll.vue";
 
   <!-- เนื้อหา: จำกัดความกว้างการ์ด ไม่ให้เต็มจอ -->
   <div class="container mx-auto max-w-4xl px-4 py-6">
-    <BlogsCreate />
+    <BlogsCreate mode="create" :texts="{ title: 'หัวข้อ', content: 'เนื้อหา', submit: 'บันทึก' }" />
   </div>
 </template>

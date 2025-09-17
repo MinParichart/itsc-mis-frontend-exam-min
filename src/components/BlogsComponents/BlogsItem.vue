@@ -1,35 +1,26 @@
 <script setup lang="ts">
-import BlogsActions from "./BlogsActions.vue";
+import BlogsActions from './BlogsActions.vue'
+import type { Blog } from '@/models/blog'
 
-interface Blogs {
-  id: number;
-  title: string;
-  date: string;
-  thumbnail?: string;
-  active: boolean;
-  pin?: boolean;
-}
-
-/* CHANGE 8: รับ selected จากพาเรนต์ */
-const props = defineProps<{ blog: Blogs; selected?: boolean }>();
-/* /CHANGE 8 */
-
-/* CHANGE 9: เพิ่มอีเวนต์ toggle-select + view */
+const props = defineProps<{ blog: Blog; selected?: boolean }>()
 const emit = defineEmits<{
-  "update:active": [boolean];
-  view: [];
-  edit: [];
-  delete: [];
-  pin: [];
-  "toggle-select": [boolean];
-}>();
-/* /CHANGE 9 */
+  'update:active': [boolean]
+  view: []
+  edit: []
+  delete: []
+  pin: []
+  'toggle-select': [boolean]
+}>()
+
+const fallback = 'https://placehold.co/64x64?text=No+Img'
+const onImgErr = (e: Event) => {
+  (e.target as HTMLImageElement).src = fallback
+}
 </script>
 
 <template>
   <tr class="border-b border-gray-200 hover:bg-gray-50 text-sm">
     <td class="p-2">
-      <!-- กัน bubble ไม่ให้กินคลิกอื่นในแถว -->
       <input
         type="checkbox"
         :checked="!props.blog.active && props.selected"
@@ -42,20 +33,15 @@ const emit = defineEmits<{
 
     <td class="p-2">
       <div class="flex items-start gap-3 min-w-[280px]">
-        <!-- รูป: คลิกแล้ว emit('view') -->
         <img
-          v-if="props.blog.thumbnail"
-          :src="props.blog.thumbnail"
+          :src="props.blog.thumbnail || fallback"
           alt="thumb"
           class="w-16 h-16 rounded object-cover cursor-pointer"
+          @error="onImgErr"
           @click="emit('view')"
         />
         <div class="flex-1 min-w-0">
-          <!-- ชื่อ: คลิกแล้ว emit('view') -->
-          <p
-            class="font-bold text-gray-700 truncate cursor-pointer"
-            @click="emit('view')"
-          >
+          <p class="font-bold text-gray-700 truncate cursor-pointer" @click="emit('view')">
             {{ props.blog.title }}
           </p>
           <p class="text-sm text-gray-500">📆 {{ props.blog.date }}</p>
