@@ -14,7 +14,7 @@ const listRef = ref<InstanceType<typeof BlogsList> | null>(null)
 const hasId = computed(() => !!route.params.id);
 
 // ถ้าเปลี่ยนเส้นทางกลับหน้า list ให้เคลียร์ชื่อ
-onMounted(()=>{ listRef.value?.refresh?.() })
+onMounted(() => { listRef.value?.refresh?.() })
 
 watch(
   () => route.params.id,
@@ -30,19 +30,14 @@ watch(
     <template #left>
       <BreadcrumbBar>
         <!-- ถ้าอยู่หน้า detail ให้ "บทความ" เป็นลิงก์กลับ /blogs -->
-        <RouterLink
-          v-if="hasId"
-          to="/blogs"
-          class="font-semibold hover:underline"
-          >บทความ</RouterLink
-        >
+        <RouterLink v-if="hasId" to="/blogs" class="font-semibold hover:underline">บทความ</RouterLink>
         <span v-else class="font-semibold">บทความ</span>
 
         <template v-if="hasId">
           <span class="opacity-70">/</span>
           <span class="font-semibold truncate max-w-[60vw]">{{
             detailTitle || "รายละเอียดบทความ"
-          }}</span>
+            }}</span>
         </template>
       </BreadcrumbBar>
     </template>

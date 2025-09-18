@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import type { Blog } from '@/models/blog'
-import { fixImgUrl } from '@/models/blog'
-import { helpers, minLength, required, useVuelidate } from '@/plugins/vuelidate'
-import * as svc from '@/services/blogService'
-import { computed, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import type { Blog } from '@/models/blog'; // type ของข้อมูล Blog
+import { fixImgUrl } from '@/models/blog'; // utility ฟังก์ชันจัดการ path รูปภาพให้ถูกต้อง
+import { helpers, minLength, required, useVuelidate } from '@/plugins/vuelidate'; // ใช้ทำ validation ของฟอร์ม (เช่น ต้องกรอก, ต้องยาว >= 3)
+import * as svc from '@/services/blogService'; // svc.blogService - service ที่เรียก API (createBlog, updateBlog)
+import { computed, reactive, ref } from 'vue'; // ของ Vue ใช้สร้าง state
+import { useRoute, useRouter } from 'vue-router'; //ใช้เปลี่ยนหน้า (navigate) และอ่าน params จาก URL
 
+// ประกาศ type ชื่อว่า Mode - type ใน TypeScript = ใช้สร้าง ชื่อใหม่ให้กับชนิดข้อมูล (type alias)
+// Mode ในโค้ดนี้ = กำหนดให้มีค่าได้แค่ 2 แบบเท่านั้นคือ 'create' หรือ 'update' เป็นการบังคับว่าเวลาเรียกใช้ จะใส่ค่าอื่นที่นอกเหนือจากนี้ไม่ได้
+// |หมายถึง รับค่าได้ หรืออย่างใดอย่างหนึ่ง
 type Mode = 'create' | 'update'
 
+// defineProps → รับค่าจาก parent component
+// initial → ใช้ตอนแก้ไข (update) ให้ฟอร์มมีค่าเริ่มต้น เช่น title/content
+// blogId → id ของ blog ที่จะอัปเดต
+// texts → ไว้ customize ข้อความ label เช่น ปุ่ม submit ให้เขียนว่า “อัปเดต” แทน
 const props = defineProps<{
   mode: Mode
   initial?: Partial<Blog>
@@ -19,7 +26,9 @@ const props = defineProps<{
   }
 }>()
 
-const emit = defineEmits<{ (e:'submitted', id:number): void }>()
+// defineEmits → ประกาศ event ที่ component จะส่งออกไปให้ parent
+// ที่นี่มี event เดียวคือ 'submitted' → ส่ง id ของ blog ที่สร้าง/แก้ไขสำเร็จ
+const emit = defineEmits<{ (e: 'submitted', id: number): void }>()
 
 const router = useRouter()
 const route = useRoute()
@@ -80,13 +89,15 @@ async function onSubmit() {
 
     <div class="space-y-1">
       <label class="text-gray-700">{{ texts?.title || 'หัวข้อ' }}</label>
-      <input v-model="form.title" type="text" class="w-full rounded border border-gray-400 px-3 py-2 outline-none focus:ring" />
+      <input v-model="form.title" type="text"
+        class="w-full rounded border border-gray-400 px-3 py-2 outline-none focus:ring" />
       <p v-if="v$.$error && v$.title.$invalid" class="text-red-600 text-sm">{{ v$.title.$errors[0]?.$message }}</p>
     </div>
 
     <div class="space-y-1">
       <label class="text-gray-700">{{ texts?.content || 'เนื้อหา' }}</label>
-      <textarea v-model="form.content" rows="6" class="w-full rounded border border-gray-400  px-3 py-2 outline-none focus:ring"></textarea>
+      <textarea v-model="form.content" rows="6"
+        class="w-full rounded border border-gray-400  px-3 py-2 outline-none focus:ring"></textarea>
       <p v-if="v$.$error && v$.content.$invalid" class="text-red-600 text-sm">{{ v$.content.$errors[0]?.$message }}</p>
     </div>
 
@@ -99,7 +110,8 @@ async function onSubmit() {
     </div>
 
     <div class="flex justify-end">
-      <button :disabled="loading" @click="onSubmit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+      <button :disabled="loading" @click="onSubmit"
+        class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
         {{ texts?.submit || (mode === 'create' ? 'บันทึก' : 'อัปเดต') }}
       </button>
     </div>

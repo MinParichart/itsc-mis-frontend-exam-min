@@ -124,12 +124,12 @@ async function fetchList(): Promise<void> {
   const rows: ApiBlog[] = Array.isArray(payload)
     ? payload
     : isApiListResp(payload)
-    ? ((totalItems.value = payload.totalItems),
-      (totalPages.value = payload.totalPages),
-      payload.rows)
-    : isApiAltResp(payload)
-    ? payload.data
-    : [];
+      ? ((totalItems.value = payload.totalItems),
+        (totalPages.value = payload.totalPages),
+        payload.rows)
+      : isApiAltResp(payload)
+        ? payload.data
+        : [];
 
   blogs.value = rows.map(mapApiBlog);
   emit("detail-title", "");
@@ -405,12 +405,10 @@ defineExpose({ refresh })
         <!-- ปุ่มลบหลายรายการ -->
         <div v-if="someSelected" class="mb-2 flex items-center gap-3">
           <span class="text-sm text-gray-600">
-            เลือกแล้ว {{ selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length }} รายการ
+            เลือกแล้ว {{selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length}} รายการ
           </span>
-          <button
-            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700"
-            @click="askBulkDelete"
-          >
+          <button class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700"
+            @click="askBulkDelete">
             <TrashIcon class="w-4 h-4" /> ลบที่เลือก
           </button>
         </div>
@@ -425,12 +423,8 @@ defineExpose({ refresh })
               <thead>
                 <tr class="bg-gray-100 text-left text-sm text-gray-600">
                   <th class="p-2 w-12">
-                    <input
-                      type="checkbox"
-                      :checked="allSelected"
-                      :disabled="eligibleIdsOnPage.length === 0"
-                      @change="toggleSelectAll(($event.target as HTMLInputElement).checked)"
-                    />
+                    <input type="checkbox" :checked="allSelected" :disabled="eligibleIdsOnPage.length === 0"
+                      @change="toggleSelectAll(($event.target as HTMLInputElement).checked)" />
                   </th>
                   <th class="p-2">หัวข้อ</th>
                   <th class="p-2 text-right"></th>
@@ -438,54 +432,32 @@ defineExpose({ refresh })
               </thead>
               <tbody>
                 <!-- ย้าย v-for มาที่คอมโพเนนต์โดยตรง และผูก @view ครั้งเดียว -->
-                <BlogsItem
-                  v-for="blog in pagedBlogs"
-                  :key="blog.id"
-                  :blog="blog"
-                  :selected="isSelected(blog.id)"
+                <BlogsItem v-for="blog in pagedBlogs" :key="blog.id" :blog="blog" :selected="isSelected(blog.id)"
                   @toggle-select="(checked: boolean) => toggleSelect(blog.id, checked)"
-                  @update:active="(v) => updateActive(blog, v)"
-                  @view="goView(blog.id)"
-                  @edit="goEdit(blog.id)"
-                  @delete="askDelete(blog.id, blog.title)"
-                  @pin="togglePin(blog)"
-                />
+                  @update:active="(v) => updateActive(blog, v)" @view="goView(blog.id)" @edit="goEdit(blog.id)"
+                  @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
               </tbody>
             </table>
           </div>
 
           <!-- Mobile -->
           <div class="md:hidden space-y-4">
-            <BlogsCard
-              v-for="blog in pagedBlogs"
-              :key="blog.id"
-              :blog="blog"
-              :selected="isSelected(blog.id)"
+            <BlogsCard v-for="blog in pagedBlogs" :key="blog.id" :blog="blog" :selected="isSelected(blog.id)"
               @toggle-select="(checked: boolean) => toggleSelect(blog.id, checked)"
-              @update:active="(v) => updateActive(blog, v)"
-              @view="goView(blog.id)"
-              @edit="goEdit(blog.id)"
-              @delete="askDelete(blog.id, blog.title)"
-              @pin="togglePin(blog)"
-            />
+              @update:active="(v) => updateActive(blog, v)" @view="goView(blog.id)" @edit="goEdit(blog.id)"
+              @delete="askDelete(blog.id, blog.title)" @pin="togglePin(blog)" />
           </div>
         </div>
 
         <BlogsFooter :total="totalItems" v-model:pageSize="pageSize" />
         <div class="mt-4 flex items-center justify-end gap-2">
-          <button
-            class="px-3 py-1 rounded border disabled:opacity-50 hover:bg-sky-200"
-            :disabled="currentPage <= 1 || loading"
-            @click="currentPage--"
-          >
+          <button class="px-3 py-1 rounded border disabled:opacity-50 hover:bg-sky-200"
+            :disabled="currentPage <= 1 || loading" @click="currentPage--">
             ก่อนหน้า
           </button>
           <span class="text-sm">หน้า {{ currentPage }} / {{ totalPages }}</span>
-          <button
-            class="px-3 py-1 rounded border disabled:opacity-50"
-            :disabled="currentPage >= totalPages || loading"
-            @click="currentPage++"
-          >
+          <button class="px-3 py-1 rounded border disabled:opacity-50" :disabled="currentPage >= totalPages || loading"
+            @click="currentPage++">
             ถัดไป
           </button>
         </div>
@@ -513,7 +485,7 @@ defineExpose({ refresh })
         <template v-if="bulkMode">
           <h3 class="text-lg font-semibold text-center">ลบข้อมูล (หลายรายการ)</h3>
           <p class="text-center text-sm text-gray-600 mt-1">
-            ยืนยันการลบ <b>{{ selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length }}</b> รายการหรือไม่
+            ยืนยันการลบ <b>{{selectedIds.filter((id) => eligibleIdsOnPage.includes(id)).length}}</b> รายการหรือไม่
           </p>
         </template>
         <template v-else>

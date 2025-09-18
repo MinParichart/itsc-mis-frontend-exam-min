@@ -9,9 +9,7 @@ import NavbarForAll from "@/components/BlogsComponents/NavbarForAll.vue";
   <NavbarForAll :show-logout="true">
     <template #left>
       <BreadcrumbBar>
-        <RouterLink to="/blogs" class="font-semibold hover:underline"
-          >บทความ</RouterLink
-        >
+        <RouterLink to="/blogs" class="font-semibold hover:underline">บทความ</RouterLink>
         <span class="opacity-80">/</span>
         <span class="font-semibold">เพิ่มบทความ</span>
       </BreadcrumbBar>
